@@ -79,23 +79,23 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T2.2 Liczenie makr (`macros.ts`)
 **AC:**
-- [ ] Funkcja przyjmuje przepis (lub listę przepisów) i zwraca sumę `calories/protein/fat/carbs`
-- [ ] Liczenie odbywa się przez `Decimal`, wynik zwracany jako `number` zaokrąglony do rozsądnej precyzji (np. 1 miejsce po przecinku)
-- [ ] Testy jednostkowe: pojedynczy przepis, plan wielodniowy, przepis z 1 składnikiem, przepis pusty (edge case)
+- [x] Funkcja przyjmuje przepis (lub listę przepisów) i zwraca sumę `calories/protein/fat/carbs`
+- [x] Liczenie odbywa się przez `Decimal`, wynik zwracany jako `number` zaokrąglony do rozsądnej precyzji (np. 1 miejsce po przecinku)
+- [x] Testy jednostkowe: pojedynczy przepis, plan wielodniowy, przepis z 1 składnikiem, przepis pusty (edge case)
 
 ### T2.3 Agregacja listy zakupów (`shoppingList.ts`)
 **AC:**
-- [ ] Funkcja przyjmuje listę `recipeIds` (z całego planu) i zwraca listę pogrupowaną po `category`, z zsumowanymi ilościami per `ingredientId`
-- [ ] Sumowanie przez `Decimal` — test potwierdzający brak błędów zaokrągleń (np. suma wielu małych wartości dziesiętnych)
-- [ ] Ten sam składnik użyty w 2+ przepisach pojawia się na liście **raz**, z sumą ilości
-- [ ] Wynik sformatowany zgodnie z `formatting.decimalPlaces` danego składnika
-- [ ] Testy jednostkowe: pusty plan, plan z 1 przepisem, plan z powtarzającymi się składnikami między przepisami
+- [x] Funkcja przyjmuje listę `recipeIds` (z całego planu) i zwraca listę pogrupowaną po `category`, z zsumowanymi ilościami per `ingredientId`
+- [x] Sumowanie przez `Decimal` — test potwierdzający brak błędów zaokrągleń (np. suma wielu małych wartości dziesiętnych)
+- [x] Ten sam składnik użyty w 2+ przepisach pojawia się na liście **raz**, z sumą ilości
+- [x] Wynik sformatowany zgodnie z `formatting.decimalPlaces` danego składnika
+- [x] Testy jednostkowe: pusty plan, plan z 1 przepisem, plan z powtarzającymi się składnikami między przepisami
 
 ### T2.4 Formatowanie liczb (`format.ts`)
 **AC:**
-- [ ] Funkcja `formatQuantity(value: Decimal, decimalPlaces: number, unitSymbol: string): string` zwraca gotowy string do wyświetlenia (np. `"2.5 szt"`)
-- [ ] Obsługuje `decimalPlaces: 0` (bez części dziesiętnej)
-- [ ] Testy jednostkowe na kilku przypadkach zaokrągleń
+- [x] Funkcja `formatQuantity(value: Decimal, decimalPlaces: number, unitSymbol: string): string` zwraca gotowy string do wyświetlenia (np. `"2.5 szt"`)
+- [x] Obsługuje `decimalPlaces: 0` (bez części dziesiętnej)
+- [x] Testy jednostkowe na kilku przypadkach zaokrągleń
 
 ---
 

@@ -6,18 +6,20 @@
     "dev": "astro dev",
     "build": "node scripts/validate-ingredients.mjs && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test": "vitest run"
   },
   "dependencies": {
-    "astro": "^5.12.0",
     "@astrojs/tailwind": "^6.0.2",
-    "tailwindcss": "^3.4.17",
     "alpinejs": "^3.14.9",
+    "astro": "^5.12.0",
     "decimal.js": "^10.5.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.10"
   }
 }
