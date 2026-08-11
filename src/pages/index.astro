@@ -1,0 +1,28 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Przepisy">
+  <h1 class="mb-6 text-3xl font-bold text-gray-900">Przepisy</h1>
+
+  <!-- Smoke test: Tailwind + Alpine.js -->
+  <div
+    x-data="{ count: 0 }"
+    class="rounded-lg border border-green-200 bg-green-50 p-6"
+  >
+    <p class="mb-4 text-green-800">
+      ✅ Tailwind działa. Alpine.js:
+      <span class="font-bold" x-text="count === 0 ? 'kliknij przycisk →' : `kliknięć: ${count}`">
+        kliknij przycisk →
+      </span>
+    </p>
+    <button
+      x-on:click="count++"
+      class="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+    >
+      Kliknij mnie
+    </button>
+  </div>
+
+  <p class="mt-8 text-gray-500">Lista przepisów pojawi się tu w Fazie 4.</p>
+</Base>
