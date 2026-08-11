@@ -1,0 +1,64 @@
+---
+// Brak props — dane z rodzica x-data="shoppingListPage()"
+// categories, list, openCats, categoryLabel(), toggle(), checked
+---
+
+<section>
+  <h2 class="mb-4 text-xl font-semibold text-gray-900">Co kupić</h2>
+
+  <div class="space-y-3">
+    <template x-for="cat in categories" :key="cat">
+      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+        <!-- Nagłówek kategorii — zwijany -->
+        <button
+          type="button"
+          class="flex w-full items-center justify-between px-4 py-3 text-left font-semibold text-gray-800 hover:bg-gray-50"
+          x-on:click="openCats[cat] = !openCats[cat]"
+        >
+          <span x-text="categoryLabel(cat)"></span>
+          <span
+            class="ml-2 text-gray-400 transition-transform duration-200"
+            x-bind:class="openCats[cat] ? 'rotate-180' : ''"
+          >▼</span>
+        </button>
+
+        <!-- Lista składników -->
+        <div x-show="openCats[cat]">
+          <ul class="divide-y divide-gray-100 px-4 pb-2">
+            <template x-for="item in list[cat]" :key="item.ingredientId">
+              <li class="flex items-center gap-3 py-3">
+                <!-- Checkbox — duży, łatwy do kliknięcia palcem -->
+                <input
+                  type="checkbox"
+                  class="h-6 w-6 flex-shrink-0 cursor-pointer rounded border-gray-300 accent-green-600"
+                  x-bind:id="'chk-' + item.ingredientId"
+                  x-bind:checked="!!checked[item.ingredientId]"
+                  x-on:change="toggle(item.ingredientId)"
+                />
+                <label
+                  class="flex flex-1 cursor-pointer items-center justify-between gap-2 select-none"
+                  x-bind:for="'chk-' + item.ingredientId"
+                >
+                  <!-- Nazwa składnika -->
+                  <span
+                    class="text-base text-gray-900 transition-colors"
+                    x-bind:class="checked[item.ingredientId] ? 'line-through text-gray-400' : ''"
+                    x-text="item.displayName"
+                  ></span>
+                  <!-- Ilość -->
+                  <span
+                    class="flex-shrink-0 text-base font-medium text-gray-600 transition-colors"
+                    x-bind:class="checked[item.ingredientId] ? 'text-gray-300' : ''"
+                    x-text="item.quantity + ' ' + item.unit"
+                  ></span>
+                </label>
+              </li>
+            </template>
+          </ul>
+        </div>
+
+      </div>
+    </template>
+  </div>
+</section>

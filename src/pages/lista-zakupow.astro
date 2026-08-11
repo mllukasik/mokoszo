@@ -1,0 +1,209 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { getIngredients } from '../lib/domain/getIngredients';
+import { CATEGORY_ORDER } from '../lib/domain/shoppingList';
+import ShoppingList from '../components/ShoppingList.astro';
+import MacrosSummary from '../components/MacrosSummary.astro';
+
+const allRecipes = await getCollection('recipes');
+const ingredients = await getIngredients();
+
+const base = import.meta.env.BASE_URL;
+
+// Mapa przepisów dla Alpine: id → {title, ingredients[]}
+const recipesMap = Object.fromEntries(
+  allRecipes.map((r) => [
+    r.id.replace(/\.md$/, ''),
+    {
+      title: r.data.title,
+      ingredients: r.data.ingredients, // [{ingredientId, quantity}]
+    },
+  ])
+);
+
+// Mapa składników dla Alpine: id → dane potrzebne do obliczeń i wyświetlenia
+const ingredientsMap = Object.fromEntries(
+  ingredients.map((ing) => [
+    ing.id,
+    {
+      displayName: ing.displayName,
+      unitSymbol: ing.unit.symbol,
+      category: ing.category,
+      decimalPlaces: ing.formatting.decimalPlaces,
+      nutritionPerUnit: ing.nutritionPerUnit,
+    },
+  ])
+);
+
+const categoryLabels: Record<string, string> = {
+  warzywa: 'Warzywa 🥦',
+  owoce: 'Owoce 🍌',
+  mięso: 'Mięso i ryby 🥩',
+  nabiał: 'Nabiał 🥛',
+  zboża: 'Zboża i makarony 🌾',
+  konserwy: 'Konserwy 🥫',
+  oleje: 'Oleje i tłuszcze 🫙',
+  przyprawy: 'Przyprawy 🧂',
+};
+---
+
+<Base title="Lista zakupów">
+  <div x-data="shoppingListPage()">
+
+    <!-- Stan pusty: brak planu lub brak przypisanych przepisów -->
+    <div x-show="isEmpty" style="display:none" class="flex flex-col items-center justify-center py-20 text-center">
+      <p class="mb-2 text-5xl">🛒</p>
+      <p class="mb-1 text-xl font-semibold text-gray-800">Lista jest pusta</p>
+      <p class="mb-6 text-sm text-gray-500">Najpierw ułóż plan jadłospisu, żeby wygenerować listę zakupów.</p>
+      <a
+        href={`${base}plan/`}
+        class="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
+      >
+        → Przejdź do planera
+      </a>
+    </div>
+
+    <!-- Zawartość — widoczna gdy plan niepusty -->
+    <div x-show="!isEmpty" style="display:none">
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-3xl font-bold text-gray-900">Lista zakupów</h1>
+        <a
+          href={`${base}plan/`}
+          class="text-sm text-gray-500 hover:text-gray-700"
+        >
+          ← Wróć do planu
+        </a>
+      </div>
+
+      <!-- Makra -->
+      <MacrosSummary />
+
+      <!-- Lista zakupów z checkboxami -->
+      <ShoppingList />
+    </div>
+
+  </div>
+</Base>
+
+<script define:vars={{ recipesMap, ingredientsMap, CATEGORY_ORDER, categoryLabels }}>
+  const STORAGE_KEY = 'mokoszo:meal-plan:v1';
+
+  window.shoppingListPage = function shoppingListPage() {
+    /** Wczytuje plan z localStorage — zwraca null jeśli brak lub uszkodzony. */
+    function loadPlan() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed.version !== 1 || !Array.isArray(parsed.days)) return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+
+    /**
+     * Agreguje składniki z podanych recipeIds.
+     * Wynik: { [category]: [{ingredientId, displayName, quantity, unit}] }
+     */
+    function buildList(recipeIds) {
+      // Zsumuj ilości per składnik
+      const totals = {};
+      for (const rid of recipeIds) {
+        const recipe = recipesMap[rid];
+        if (!recipe) continue;
+        for (const { ingredientId, quantity } of recipe.ingredients) {
+          totals[ingredientId] = (totals[ingredientId] ?? 0) + parseFloat(quantity);
+        }
+      }
+
+      // Grupuj po kategorii, formatuj ilość
+      const byCategory = {};
+      for (const [ingredientId, total] of Object.entries(totals)) {
+        const ing = ingredientsMap[ingredientId];
+        if (!ing) continue;
+        const dp = ing.decimalPlaces;
+        const qty = dp === 0 ? String(Math.round(total)) : total.toFixed(dp);
+        const cat = ing.category;
+        if (!byCategory[cat]) byCategory[cat] = [];
+        byCategory[cat].push({
+          ingredientId,
+          displayName: ing.displayName,
+          quantity: qty,
+          unit: ing.unitSymbol,
+        });
+      }
+
+      // Sortuj alfabetycznie w każdej kategorii
+      for (const items of Object.values(byCategory)) {
+        items.sort((a, b) => a.displayName.localeCompare(b.displayName, 'pl'));
+      }
+
+      return byCategory;
+    }
+
+    /** Liczy sumę makr dla podanych recipeIds. */
+    function computeMacros(recipeIds) {
+      let cal = 0, prot = 0, fat = 0, carbs = 0;
+      for (const rid of recipeIds) {
+        const recipe = recipesMap[rid];
+        if (!recipe) continue;
+        for (const { ingredientId, quantity } of recipe.ingredients) {
+          const ing = ingredientsMap[ingredientId];
+          if (!ing) continue;
+          const qty = parseFloat(quantity);
+          cal   += qty * ing.nutritionPerUnit.calories;
+          prot  += qty * ing.nutritionPerUnit.protein;
+          fat   += qty * ing.nutritionPerUnit.fat;
+          carbs += qty * ing.nutritionPerUnit.carbs;
+        }
+      }
+      return {
+        calories: Math.round(cal   * 10) / 10,
+        protein:  Math.round(prot  * 10) / 10,
+        fat:      Math.round(fat   * 10) / 10,
+        carbs:    Math.round(carbs * 10) / 10,
+      };
+    }
+
+    return {
+      plan: null,
+      list: {},       // { [category]: ShoppingItem[] }
+      macros: null,   // { calories, protein, fat, carbs }
+      checked: {},    // { [ingredientId]: boolean } — tylko sesja, bez persystencji
+      openCats: {},   // { [category]: boolean } — zwinięte/rozwinięte
+
+      /** Czy plan jest pusty (brak lub żaden dzień nie ma przepisów). */
+      get isEmpty() {
+        return !this.plan || !this.plan.days.some((d) => d.recipeIds.length > 0);
+      },
+
+      /** Kategorie w kolejności z CATEGORY_ORDER, tylko te z zawartością. */
+      get categories() {
+        return CATEGORY_ORDER.filter((cat) => this.list[cat]?.length > 0);
+      },
+
+      categoryLabel(cat) {
+        return categoryLabels[cat] ?? cat;
+      },
+
+      toggle(ingredientId) {
+        this.checked[ingredientId] = !this.checked[ingredientId];
+      },
+
+      init() {
+        this.plan = loadPlan();
+        if (!this.isEmpty) {
+          const allIds = this.plan.days.flatMap((d) => d.recipeIds);
+          this.list   = buildList(allIds);
+          this.macros = computeMacros(allIds);
+          // Wszystkie kategorie domyślnie rozwinięte
+          for (const cat of CATEGORY_ORDER) {
+            this.openCats[cat] = true;
+          }
+        }
+      },
+    };
+  };
+</script>

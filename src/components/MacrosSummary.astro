@@ -1,0 +1,25 @@
+---
+// Brak props — dane z rodzica x-data="shoppingListPage()"
+---
+
+<section class="mb-8">
+  <h2 class="mb-3 text-xl font-semibold text-gray-900">Wartości odżywcze (cały plan)</h2>
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div class="rounded-xl bg-amber-50 p-4 text-center">
+      <p class="text-2xl font-bold text-amber-700" x-text="macros ? macros.calories.toFixed(1) : '—'"></p>
+      <p class="mt-1 text-xs font-medium text-amber-600 uppercase tracking-wide">kcal</p>
+    </div>
+    <div class="rounded-xl bg-blue-50 p-4 text-center">
+      <p class="text-2xl font-bold text-blue-700" x-text="macros ? macros.protein.toFixed(1) + ' g' : '—'"></p>
+      <p class="mt-1 text-xs font-medium text-blue-600 uppercase tracking-wide">białko</p>
+    </div>
+    <div class="rounded-xl bg-red-50 p-4 text-center">
+      <p class="text-2xl font-bold text-red-700" x-text="macros ? macros.fat.toFixed(1) + ' g' : '—'"></p>
+      <p class="mt-1 text-xs font-medium text-red-600 uppercase tracking-wide">tłuszcze</p>
+    </div>
+    <div class="rounded-xl bg-green-50 p-4 text-center">
+      <p class="text-2xl font-bold text-green-700" x-text="macros ? macros.carbs.toFixed(1) + ' g' : '—'"></p>
+      <p class="mt-1 text-xs font-medium text-green-600 uppercase tracking-wide">węglowodany</p>
+    </div>
+  </div>
+</section>

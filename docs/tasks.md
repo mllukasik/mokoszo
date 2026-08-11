@@ -170,20 +170,20 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T6.1 `lista-zakupow.astro`
 **AC:**
-- [ ] Odczytuje aktualny plan z `MealPlanRepository`
-- [ ] Jeśli plan jest pusty — czytelny komunikat (nie pusta biała strona) z linkiem do `/plan`
-- [ ] Wywołuje `shoppingList.ts` i renderuje wynik
+- [x] Odczytuje aktualny plan z `MealPlanRepository`
+- [x] Jeśli plan jest pusty — czytelny komunikat (nie pusta biała strona) z linkiem do `/plan`
+- [x] Wywołuje `shoppingList.ts` i renderuje wynik
 
 ### T6.2 `ShoppingList.astro`
 **AC:**
-- [ ] Lista pogrupowana po `category`, każda kategoria zwijana/rozwijana (Alpine `x-show`)
-- [ ] Każdy składnik ma checkbox (stan checkboxa może żyć tylko w pamięci sesji — bez wymogu trwałości w v1, do potwierdzenia)
-- [ ] Duży, czytelny tekst i touch targety wygodne na telefonie (priorytet: używane w sklepie)
+- [x] Lista pogrupowana po `category`, każda kategoria zwijana/rozwijana (Alpine `x-show`)
+- [x] Każdy składnik ma checkbox (stan checkboxa może żyć tylko w pamięci sesji — bez wymogu trwałości w v1, do potwierdzenia)
+- [x] Duży, czytelny tekst i touch targety wygodne na telefonie (priorytet: używane w sklepie)
 
 ### T6.3 `MacrosSummary.astro`
 **AC:**
-- [ ] Pokazuje sumę makr (kalorie/białko/tłuszcz/węgle) dla całego planu
-- [ ] Liczby czytelne i zaokrąglone (nie 10 miejsc po przecinku)
+- [x] Pokazuje sumę makr (kalorie/białko/tłuszcz/węgle) dla całego planu
+- [x] Liczby czytelne i zaokrąglone (nie 10 miejsc po przecinku)
 
 ---
 
