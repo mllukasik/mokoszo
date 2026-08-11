@@ -33,7 +33,7 @@ const { recipes } = Astro.props;
             x-bind:class={`hasRecipe(dayIndex, '${recipe.id}')
               ? 'bg-green-600 text-white border-green-600'
               : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'`}
-            class="rounded-full border px-3 py-1.5 text-sm font-medium transition"
+            class="min-h-[44px] rounded-full border px-3 py-1.5 text-sm font-medium transition"
           >
             {recipe.title}
           </button>

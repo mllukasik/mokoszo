@@ -15,7 +15,7 @@ const { allTags } = Astro.props;
       x-bind:class={`activeTags.includes('${tag}')
         ? 'bg-green-600 text-white border-green-600'
         : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'`}
-      class="rounded-full border px-3 py-1.5 text-sm font-medium transition"
+      class="min-h-[44px] rounded-full border px-3 py-1.5 text-sm font-medium transition"
     >
       {tag}
     </button>
@@ -25,7 +25,7 @@ const { allTags } = Astro.props;
     type="button"
     x-show="activeTags.length > 0"
     x-on:click="activeTags = []; page = 1"
-    class="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
+    class="min-h-[44px] rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
     style="display:none"
   >
     Wyczyść filtry

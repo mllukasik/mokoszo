@@ -191,9 +191,9 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T7.1 Przegląd wszystkich stron pod mobile-first
 **AC:**
-- [ ] Każda strona przetestowana na ~375px, ~768px, ~1280px (DevTools albo realne urządzenie)
-- [ ] Brak poziomego scrolla na żadnej szerokości
-- [ ] Elementy klikalne (linki, przyciski, checkboxy) mają wystarczający touch target na mobile (min. ~44px wysokości)
+- [x] Każda strona przetestowana na ~375px, ~768px, ~1280px (DevTools albo realne urządzenie)
+- [x] Brak poziomego scrolla na żadnej szerokości
+- [x] Elementy klikalne (linki, przyciski, checkboxy) mają wystarczający touch target na mobile (min. ~44px wysokości)
 
 ---
 

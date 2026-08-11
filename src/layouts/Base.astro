@@ -21,13 +21,13 @@ const base = import.meta.env.BASE_URL;
       window.Alpine = Alpine;
       Alpine.start();
     </script>
-    <header class="border-b border-gray-200 px-4 py-3">
-      <nav class="mx-auto flex max-w-5xl items-center gap-6">
-        <a href={base} class="text-lg font-bold text-green-700 hover:text-green-900">
+    <header class="border-b border-gray-200 px-4">
+      <nav class="mx-auto flex max-w-5xl items-stretch gap-6">
+        <a href={base} class="inline-flex min-h-[44px] items-center text-lg font-bold text-green-700 hover:text-green-900">
           🥗 Mokoszo
         </a>
-        <a href={`${base}plan/`} class="text-sm text-gray-600 hover:text-gray-900">Plan</a>
-        <a href={`${base}lista-zakupow/`} class="text-sm text-gray-600 hover:text-gray-900">
+        <a href={`${base}plan/`} class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-sm text-gray-600 hover:text-gray-900">Plan</a>
+        <a href={`${base}lista-zakupow/`} class="inline-flex min-h-[44px] items-center text-sm text-gray-600 hover:text-gray-900">
           Lista zakupów
         </a>
       </nav>

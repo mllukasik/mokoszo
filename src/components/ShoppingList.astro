@@ -27,17 +27,19 @@
         <div x-show="openCats[cat]">
           <ul class="divide-y divide-gray-100 px-4 pb-2">
             <template x-for="item in list[cat]" :key="item.ingredientId">
-              <li class="flex items-center gap-3 py-3">
-                <!-- Checkbox — duży, łatwy do kliknięcia palcem -->
-                <input
-                  type="checkbox"
-                  class="h-6 w-6 flex-shrink-0 cursor-pointer rounded border-gray-300 accent-green-600"
-                  x-bind:id="'chk-' + item.ingredientId"
-                  x-bind:checked="!!checked[item.ingredientId]"
-                  x-on:change="toggle(item.ingredientId)"
-                />
+              <li class="flex min-h-[44px] items-center gap-3">
+                <!-- Checkbox — min 44px touch target -->
+                <span class="flex min-h-[44px] flex-shrink-0 items-center">
+                  <input
+                    type="checkbox"
+                    class="h-6 w-6 cursor-pointer rounded border-gray-300 accent-green-600"
+                    x-bind:id="'chk-' + item.ingredientId"
+                    x-bind:checked="!!checked[item.ingredientId]"
+                    x-on:change="toggle(item.ingredientId)"
+                  />
+                </span>
                 <label
-                  class="flex flex-1 cursor-pointer items-center justify-between gap-2 select-none"
+                  class="flex min-h-[44px] flex-1 cursor-pointer items-center justify-between gap-2 select-none"
                   x-bind:for="'chk-' + item.ingredientId"
                 >
                   <!-- Nazwa składnika -->
