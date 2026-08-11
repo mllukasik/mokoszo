@@ -1,12 +1,13 @@
-import type { MealPlan } from '../domain/types.js';
+import type { MealPlanV1 } from '../domain/types.js';
 
 /**
- * Abstrakcja nad persystencją planu posiłków.
- * v1 implementacja: LocalStorageMealPlanRepository
- * Podmiana na backend/API w przyszłości nie wymaga zmian w komponentach UI.
+ * Abstrakcja nad persystencją planu posiłków (legacy v1 — jeden plan).
+ * Nowy format v2 (wiele planów, sloty posiłków) jest obsługiwany inline
+ * w plan.astro i lista-zakupow.astro z kluczem 'mokoszo:plans:v2'.
+ * Interfejs zachowany pod podmianę na backend/API w przyszłości.
  */
 export interface MealPlanRepository {
-  getPlan(): MealPlan | null;
-  savePlan(plan: MealPlan): void;
+  getPlan(): MealPlanV1 | null;
+  savePlan(plan: MealPlanV1): void;
   clearPlan(): void;
 }

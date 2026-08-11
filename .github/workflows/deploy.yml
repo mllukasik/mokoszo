@@ -1,7 +1,10 @@
-name: Deploy to GitHub Pages
+name: CI + Deploy to GitHub Pages
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
   workflow_dispatch:
@@ -16,8 +19,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build
+  # ── Statyczna analiza i testy jednostkowe ─────────────────────────────────────
+  ci:
+    name: CI (typecheck + unit tests + build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -32,18 +36,65 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build site
+      - name: Type check (astro check)
+        run: npm run typecheck
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      - name: Build site (+ walidacja składników)
         run: npm run build
 
       - name: Upload Pages artifact
+        # Artefakt tylko przy push do main (nie PR)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
 
+  # ── Testy E2E (Playwright) — tylko na main ─────────────────────────────────────
+  e2e:
+    name: E2E tests (Playwright / Chromium)
+    runs-on: ubuntu-latest
+    needs: ci
+    # Uruchamiaj E2E tylko przy push do main, nie na PR (żeby nie spowalniać)
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build site
+        run: npm run build
+
+      - name: Run E2E tests
+        run: npx playwright test --project=chromium
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ── Deploy na GitHub Pages ────────────────────────────────────────────────────
   deploy:
     name: Deploy
-    needs: build
+    needs: [ci, e2e]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

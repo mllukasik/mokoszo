@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LocalStorageMealPlanRepository } from './LocalStorageMealPlanRepository.js';
-import type { MealPlan } from '../domain/types.js';
+import type { MealPlanV1 } from '../domain/types.js';
 
 // ── Mock localStorage ─────────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ global.localStorage = localStorageMock;
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const samplePlan: MealPlan = {
+const samplePlan: MealPlanV1 = {
   version: 1,
   days: [
     { date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] },
@@ -68,7 +68,7 @@ describe('LocalStorageMealPlanRepository', () => {
   });
 
   it('savePlan zachowuje plan z wieloma dniami i przepisami', () => {
-    const complexPlan: MealPlan = {
+    const complexPlan: MealPlanV1 = {
       version: 1,
       days: Array.from({ length: 7 }, (_, i) => ({
         date: `2026-08-${String(11 + i).padStart(2, '0')}`,

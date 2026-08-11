@@ -2,7 +2,7 @@
  * Skrypt do wizualnej weryfikacji stron — robi screenshoty na każdym etapie.
  * Uruchom: npx playwright test e2e/visual-check.test.ts --project=chromium
  */
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import * as path from 'path';
 
 const SCREENS = path.resolve('e2e/screenshots');

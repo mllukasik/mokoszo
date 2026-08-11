@@ -30,7 +30,7 @@ const recipesMeta = recipes.map((r, index) => ({
   </div>
 </Base>
 
-<script define:vars={{ recipesMeta, allTags }}>
+<script is:inline define:vars={{ recipesMeta, allTags }}>
   window.recipeList = function recipeList() {
     return {
       activeTags: [],

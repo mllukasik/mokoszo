@@ -2,13 +2,13 @@
  * Wizualna weryfikacja strony listy zakupów.
  * Uruchom: npx playwright test e2e/shopping-visual.test.ts --project=chromium
  */
-import { test } from '@playwright/test';
+import { test, type Page } from '@playwright/test';
 import * as path from 'path';
 
 const SC = path.resolve('e2e/screenshots');
 const PLANS_KEY = 'mokoszo:plans:v2';
 
-async function setPlan(page, days: { date: string; recipeIds: string[] }[]) {
+async function setPlan(page: Page, days: { date: string; recipeIds: string[] }[]) {
   const planId = 'visual-test-plan';
   const storage = {
     version: 2,
@@ -30,7 +30,8 @@ async function setPlan(page, days: { date: string; recipeIds: string[] }[]) {
     activeForShopping: planId,
   };
   await page.evaluate(
-    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    ({ key, data }: { key: string; data: unknown }) =>
+      localStorage.setItem(key, JSON.stringify(data)),
     { key: PLANS_KEY, data: storage }
   );
 }

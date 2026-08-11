@@ -7,7 +7,7 @@ import ShoppingList from '../components/ShoppingList.astro';
 import MacrosSummary from '../components/MacrosSummary.astro';
 
 const allRecipes = await getCollection('recipes');
-const ingredients = await getIngredients();
+const ingredients = getIngredients();
 
 const base = import.meta.env.BASE_URL;
 
@@ -89,7 +89,7 @@ const categoryLabels: Record<string, string> = {
   </div>
 </Base>
 
-<script define:vars={{ recipesMap, ingredientsMap, CATEGORY_ORDER, categoryLabels }}>
+<script is:inline define:vars={{ recipesMap, ingredientsMap, CATEGORY_ORDER, categoryLabels }}>
   const PLANS_KEY = 'mokoszo:plans:v2';
 
   window.shoppingListPage = function shoppingListPage() {

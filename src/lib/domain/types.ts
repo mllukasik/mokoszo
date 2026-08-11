@@ -51,15 +51,14 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
-// ─── MealPlan v1 (legacy — zachowane dla referencji) ──────────────────────────
+// ─── MealPlan v1 (legacy — zachowane dla LocalStorageMealPlanRepository) ──────
+// Nowy format v2 używany przez aplikację to PlansStorage poniżej.
 
-/** @deprecated Używane tylko przez stare testy. Nowy format: MealPlanV2 */
 export interface MealPlanDayV1 {
   date: string;
   recipeIds: string[];
 }
 
-/** @deprecated Stary format localStorage. Nowy: MealPlanV2 */
 export interface MealPlanV1 {
   version: 1;
   days: MealPlanDayV1[];
