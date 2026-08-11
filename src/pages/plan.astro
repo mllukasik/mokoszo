@@ -1,0 +1,182 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import MealPlanner from '../components/MealPlanner.astro';
+
+const allRecipes = await getCollection('recipes');
+allRecipes.sort((a, b) => a.data.title.localeCompare(b.data.title, 'pl'));
+
+const recipes = allRecipes.map((r) => ({
+  id: r.id.replace(/\.md$/, ''),
+  title: r.data.title,
+  prepTimeMinutes: r.data.prepTimeMinutes,
+}));
+
+const base = import.meta.env.BASE_URL;
+---
+
+<Base title="Plan jadłospisu">
+  <h1 class="mb-6 text-3xl font-bold text-gray-900">Plan jadłospisu</h1>
+
+  <div x-data="mealPlanner()">
+    <!-- Kontrolka liczby dni -->
+    <div class="mb-6 flex flex-wrap items-center gap-4">
+      <span class="text-sm font-medium text-gray-700">Liczba dni:</span>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          x-on:click="setNumDays(numDays - 1)"
+          x-bind:disabled="numDays <= 1"
+          x-bind:class="numDays <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
+          class="min-h-[44px] min-w-[44px] rounded-lg border border-gray-300 text-xl font-medium"
+          aria-label="Zmniejsz liczbę dni"
+        >
+          −
+        </button>
+        <span
+          x-text="numDays"
+          class="min-w-[2.5rem] text-center text-xl font-bold text-gray-900"
+        ></span>
+        <button
+          type="button"
+          x-on:click="setNumDays(numDays + 1)"
+          x-bind:disabled="numDays >= 14"
+          x-bind:class="numDays >= 14 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
+          class="min-h-[44px] min-w-[44px] rounded-lg border border-gray-300 text-xl font-medium"
+          aria-label="Zwiększ liczbę dni"
+        >
+          +
+        </button>
+      </div>
+
+      <button
+        type="button"
+        x-show="hasAnyRecipes"
+        x-on:click="clearPlan()"
+        class="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
+        style="display:none"
+      >
+        Wyczyść plan
+      </button>
+    </div>
+
+    <!-- Planer dni -->
+    <MealPlanner recipes={recipes} />
+
+    <!-- CTA do listy zakupów -->
+    <div class="mt-8" x-show="hasAnyRecipes" style="display:none">
+      <a
+        href={`${base}lista-zakupow/`}
+        class="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
+      >
+        🛒 Przejdź do listy zakupów →
+      </a>
+    </div>
+  </div>
+</Base>
+
+<script define:vars={{ recipes }}>
+  const STORAGE_KEY = 'mokoszo:meal-plan:v1';
+
+  function mealPlanner() {
+    // Lokalna kopia przepisów do wyszukiwania tytułu po id
+    const recipeMap = Object.fromEntries(recipes.map((r) => [r.id, r]));
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed.version !== 1 || !Array.isArray(parsed.days)) return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+
+    function persist(days) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, days }));
+      } catch {
+        // tryb prywatny lub brak miejsca — ignorujemy
+      }
+    }
+
+    return {
+      numDays: 3,
+      days: /** @type {{ date: string; recipeIds: string[] }[]} */ ([]),
+
+      init() {
+        const saved = load();
+        if (saved?.days?.length > 0) {
+          this.numDays = saved.days.length;
+          this.days = saved.days;
+        } else {
+          this._buildDays(3);
+        }
+      },
+
+      /** Buduje tablicę dni startując od dzisiaj; zachowuje recipeIds dla istniejących indeksów. */
+      _buildDays(n) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const prev = this.days;
+        this.days = Array.from({ length: n }, (_, i) => {
+          const d = new Date(today);
+          d.setDate(today.getDate() + i);
+          return {
+            date: d.toISOString().split('T')[0],
+            recipeIds: prev[i]?.recipeIds ?? [],
+          };
+        });
+      },
+
+      setNumDays(n) {
+        const clamped = Math.max(1, Math.min(14, n));
+        this._buildDays(clamped);
+        this.numDays = clamped;
+        persist(this.days);
+      },
+
+      toggleRecipe(dayIndex, recipeId) {
+        const day = this.days[dayIndex];
+        if (!day) return;
+        const i = day.recipeIds.indexOf(recipeId);
+        if (i === -1) day.recipeIds.push(recipeId);
+        else day.recipeIds.splice(i, 1);
+        persist(this.days);
+      },
+
+      hasRecipe(dayIndex, recipeId) {
+        return this.days[dayIndex]?.recipeIds.includes(recipeId) ?? false;
+      },
+
+      recipeTitle(recipeId) {
+        return recipeMap[recipeId]?.title ?? recipeId;
+      },
+
+      get hasAnyRecipes() {
+        return this.days.some((d) => d.recipeIds.length > 0);
+      },
+
+      formatDate(dateStr) {
+        const date = new Date(dateStr + 'T12:00:00');
+        return new Intl.DateTimeFormat('pl-PL', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+        }).format(date);
+      },
+
+      clearPlan() {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch {
+          // ignore
+        }
+        this._buildDays(this.numDays);
+      },
+    };
+  }
+</script>

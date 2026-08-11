@@ -154,15 +154,15 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T5.1 `plan.astro` — wybór liczby dni
 **AC:**
-- [ ] User może ustawić liczbę dni planu (input liczbowy lub podobne)
-- [ ] Zmiana liczby dni nie kasuje już przypisanych przepisów dla istniejących dni (chyba że dni są skracane — wtedy nadmiarowe dni i ich przypisania usuwane)
+- [x] User może ustawić liczbę dni planu (input liczbowy lub podobne)
+- [x] Zmiana liczby dni nie kasuje już przypisanych przepisów dla istniejących dni (chyba że dni są skracane — wtedy nadmiarowe dni i ich przypisania usuwane)
 
 ### T5.2 `MealPlanner.astro` — przypisywanie przepisów do dni
 **AC:**
-- [ ] Dla każdego dnia można wybrać 1+ przepis (z listy 10 dostępnych)
-- [ ] Każda zmiana natychmiast zapisywana przez `MealPlanRepository` do `localStorage`
-- [ ] Po odświeżeniu strony plan jest odtwarzany z `localStorage` (persist działa)
-- [ ] Layout: dni w pionie (scroll) na mobile, siatka/kolumny na desktop
+- [x] Dla każdego dnia można wybrać 1+ przepis (z listy 10 dostępnych)
+- [x] Każda zmiana natychmiast zapisywana przez `MealPlanRepository` do `localStorage`
+- [x] Po odświeżeniu strony plan jest odtwarzany z `localStorage` (persist działa)
+- [x] Layout: dni w pionie (scroll) na mobile, siatka/kolumny na desktop
 
 ---
 
