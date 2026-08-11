@@ -59,14 +59,14 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T1.4 Walidacja spójności danych (build-time)
 **AC:**
-- [ ] Skrypt (np. w `astro.config.mjs` integration albo osobny node script uruchamiany w CI) sprawdza, że każdy `ingredientId` w przepisach istnieje w `ingredients.yaml`
-- [ ] Build/CI failuje z czytelnym komunikatem, jeśli walidacja nie przejdzie (wskazuje który przepis i który brakujący `ingredientId`)
+- [x] Skrypt (np. w `astro.config.mjs` integration albo osobny node script uruchamiany w CI) sprawdza, że każdy `ingredientId` w przepisach istnieje w `ingredients.yaml`
+- [x] Build/CI failuje z czytelnym komunikatem, jeśli walidacja nie przejdzie (wskazuje który przepis i który brakujący `ingredientId`)
 
 ### T1.5 Loader `getIngredients.ts`
 **AC:**
-- [ ] Funkcja wczytuje i parsuje `src/data/ingredients.yaml` (przez `js-yaml`) i zwraca typowaną tablicę `Ingredient[]`
-- [ ] To jedyne miejsce w kodzie, które bezpośrednio czyta plik `ingredients.yaml` — `macros.ts`, `shoppingList.ts` i komponenty korzystają z tej funkcji, nie z pliku bezpośrednio
-- [ ] Błąd parsowania YAML (np. literówka w składni) daje czytelny komunikat przy buildzie
+- [x] Funkcja wczytuje i parsuje `src/data/ingredients.yaml` (przez `js-yaml`) i zwraca typowaną tablicę `Ingredient[]`
+- [x] To jedyne miejsce w kodzie, które bezpośrednio czyta plik `ingredients.yaml` — `macros.ts`, `shoppingList.ts` i komponenty korzystają z tej funkcji, nie z pliku bezpośrednio
+- [x] Błąd parsowania YAML (np. literówka w składni) daje czytelny komunikat przy buildzie
 
 ---
 
@@ -74,8 +74,8 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T2.1 Typy (`src/lib/domain/types.ts`)
 **AC:**
-- [ ] Typy `Ingredient`, `Recipe`, `MealPlan`, `MealPlanDay` zgodne z `docs/data-model.md`
-- [ ] Reużywane zarówno przez logikę domenową, jak i komponenty Astro/Alpine (brak duplikacji typów)
+- [x] Typy `Ingredient`, `Recipe`, `MealPlan`, `MealPlanDay` zgodne z `docs/data-model.md`
+- [x] Reużywane zarówno przez logikę domenową, jak i komponenty Astro/Alpine (brak duplikacji typów)
 
 ### T2.2 Liczenie makr (`macros.ts`)
 **AC:**
