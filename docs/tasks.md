@@ -15,10 +15,10 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T0.2 Konfiguracja CI/CD na GitHub Pages
 **AC:**
-- [ ] Workflow `.github/workflows/deploy.yml` builduje projekt (`npm run build`) i publikuje `dist/` przez `actions/deploy-pages` (lub `actions/upload-pages-artifact` + `actions/deploy-pages`)
-- [ ] W ustawieniach repo (Settings → Pages) źródło ustawione na "GitHub Actions"
-- [ ] Strona dostępna pod adresem `*.github.io/...` po pushu do gałęzi głównej
-- [ ] `site` i `base` w `astro.config.mjs` ustawione poprawnie pod nazwę repo (linki wewnętrzne działają, nie ma 404 na assetach) — jeśli repo nazywa się inaczej niż `<user>.github.io`, `base` musi być `/<nazwa-repo>/`
+- [x] Workflow `.github/workflows/deploy.yml` builduje projekt (`npm run build`) i publikuje `dist/` przez `actions/deploy-pages` (lub `actions/upload-pages-artifact` + `actions/deploy-pages`)
+- [x] W ustawieniach repo (Settings → Pages) źródło ustawione na "GitHub Actions"
+- [x] Strona dostępna pod adresem `*.github.io/...` po pushu do gałęzi głównej (custom domain: https://portfolio.mllukasik.pl/mokoszo/)
+- [x] `site` i `base` w `astro.config.mjs` ustawione poprawnie pod nazwę repo (linki wewnętrzne działają, nie ma 404 na assetach) — jeśli repo nazywa się inaczej niż `<user>.github.io`, `base` musi być `/<nazwa-repo>/`
 
 ### T0.3 Instalacja zależności domenowych
 **AC:**
