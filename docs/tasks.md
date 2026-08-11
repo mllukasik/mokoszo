@@ -33,17 +33,17 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T1.0 Analiza potrzeb i finalizacja modelu danych
 **AC:**
-- [ ] Przejrzane wszystkie 10 planowanych przepisów (choćby na szkicu/liście) pod kątem tego, jakie pola faktycznie będą potrzebne — np. czy każdy składnik da się opisać jedną stałą jednostką, czy pojawiają się przypadki graniczne (przyprawy "do smaku", składniki opcjonalne, warianty przepisu)
-- [ ] Przejrzane realne kategorie składników, jakie wystąpią (nie zgadywanie z góry) — żeby `category` w `ingredients.yaml` była kompletna i konsekwentna
-- [ ] Zweryfikowane założenia z `docs/data-model.md` (patrz TODO w tym pliku) względem realnych danych — jeśli któreś założenie się nie broni, model jest poprawiony **przed** napisaniem `ingredients.yaml` i przepisów, nie po
-- [ ] `docs/data-model.md` zaktualizowany do wersji finalnej: usunięty nagłówek "założenia robocze", dopisane realne przykłady (min. 3 różne składniki pokazujące rozpiętość przypadków, nie tylko cebula), rozstrzygnięte wszystkie TODO
-- [ ] Schema Zod w T1.1 opiera się już na tej finalnej wersji, nie na wstępnych założeniach
+- [x] Przejrzane wszystkie 10 planowanych przepisów (choćby na szkicu/liście) pod kątem tego, jakie pola faktycznie będą potrzebne — np. czy każdy składnik da się opisać jedną stałą jednostką, czy pojawiają się przypadki graniczne (przyprawy "do smaku", składniki opcjonalne, warianty przepisu)
+- [x] Przejrzane realne kategorie składników, jakie wystąpią (nie zgadywanie z góry) — żeby `category` w `ingredients.yaml` była kompletna i konsekwentna
+- [x] Zweryfikowane założenia z `docs/data-model.md` (patrz TODO w tym pliku) względem realnych danych — jeśli któreś założenie się nie broni, model jest poprawiony **przed** napisaniem `ingredients.yaml` i przepisów, nie po
+- [x] `docs/data-model.md` zaktualizowany do wersji finalnej: usunięty nagłówek "założenia robocze", dopisane realne przykłady (min. 3 różne składniki pokazujące rozpiętość przypadków, nie tylko cebula), rozstrzygnięte wszystkie TODO
+- [x] Schema Zod w T1.1 opiera się już na tej finalnej wersji, nie na wstępnych założeniach
 
 ### T1.1 Schema Content Collection dla przepisów
 **AC:**
-- [ ] `src/content/config.ts` definiuje schemat Zod zgodny z `docs/data-model.md`
-- [ ] Build failuje, jeśli przepis ma brakujące/złego typu pole (np. `servings` jako string zamiast liczby)
-- [ ] `ingredients` w schemacie wymaga niepustej tablicy `{ ingredientId: string, quantity: string }`
+- [x] `src/content/config.ts` definiuje schemat Zod zgodny z `docs/data-model.md`
+- [x] Build failuje, jeśli przepis ma brakujące/złego typu pole (np. `servings` jako string zamiast liczby)
+- [x] `ingredients` w schemacie wymaga niepustej tablicy `{ ingredientId: string, quantity: string }`
 
 ### T1.2 Baza składników (`ingredients.yaml`)
 **AC:**
