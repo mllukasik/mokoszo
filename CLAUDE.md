@@ -26,8 +26,9 @@ gh run list --limit 5
 gh run view <run-id>
 ```
 
-Deploy target: `https://mllukasik.github.io/mokoszo/`
-`site: 'https://mllukasik.github.io'` + `base: '/mokoszo/'` w `astro.config.mjs`
+Deploy target: `https://portfolio.mllukasik.pl/mokoszo/`
+Custom domain GitHub Pages: `portfolio.mllukasik.pl`
+`site: 'https://portfolio.mllukasik.pl'` + `base: '/mokoszo/'` w `astro.config.mjs`
 
 ## Stack
 

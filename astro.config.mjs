@@ -3,7 +3,7 @@ import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://mllukasik.github.io',
+  site: 'https://portfolio.mllukasik.pl',
   base: '/mokoszo/',
   integrations: [tailwind()],
 });
