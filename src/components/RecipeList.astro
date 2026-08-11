@@ -1,0 +1,66 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import RecipeCard from './RecipeCard.astro';
+
+interface Props {
+  recipes: CollectionEntry<'recipes'>[];
+}
+const { recipes } = Astro.props;
+---
+
+<!-- Licznik -->
+<p class="mb-4 text-sm text-gray-500">
+  Znaleziono <span x-text="filteredMeta.length" class="font-medium text-gray-700"></span> przepis(-ów)
+</p>
+
+<!-- Siatka kart: Astro renderuje wszystkie, Alpine kontroluje widoczność -->
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  {recipes.map((recipe, index) => (
+    <div x-show={`shouldShow(${index})`} style="display:none">
+      <RecipeCard recipe={recipe} />
+    </div>
+  ))}
+</div>
+
+<!-- Paginacja -->
+<nav
+  x-show="totalPages > 1"
+  class="mt-8 flex items-center justify-center gap-1"
+  aria-label="Paginacja"
+  style="display:none"
+>
+  <button
+    type="button"
+    x-on:click="prevPage()"
+    x-bind:disabled="page === 1"
+    x-bind:class="page === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
+    class="min-h-[44px] min-w-[44px] rounded-lg border border-gray-300 text-sm"
+    aria-label="Poprzednia strona"
+  >
+    ←
+  </button>
+
+  <template x-for="p in pageNumbers" :key="p">
+    <button
+      type="button"
+      x-on:click="page = p"
+      x-bind:class="p === page
+        ? 'bg-green-600 text-white border-green-600'
+        : 'hover:bg-gray-100 border-gray-300'"
+      x-bind:aria-current="p === page ? 'page' : undefined"
+      class="min-h-[44px] min-w-[44px] rounded-lg border text-sm font-medium"
+      x-text="p"
+    ></button>
+  </template>
+
+  <button
+    type="button"
+    x-on:click="nextPage()"
+    x-bind:disabled="page >= totalPages"
+    x-bind:class="page >= totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
+    class="min-h-[44px] min-w-[44px] rounded-lg border border-gray-300 text-sm"
+    aria-label="Następna strona"
+  >
+    →
+  </button>
+</nav>

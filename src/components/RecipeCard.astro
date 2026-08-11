@@ -1,0 +1,31 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  recipe: CollectionEntry<'recipes'>;
+}
+
+const { recipe } = Astro.props;
+const { title, tags, prepTimeMinutes } = recipe.data;
+const slug = recipe.id.replace(/\.md$/, '');
+const base = import.meta.env.BASE_URL;
+---
+
+<a
+  href={`${base}przepis/${slug}/`}
+  class="group flex h-full flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-green-300 hover:shadow-md"
+>
+  <h2 class="mb-2 text-lg font-semibold text-gray-900 group-hover:text-green-700">
+    {title}
+  </h2>
+
+  <div class="mb-3 flex flex-wrap gap-1">
+    {tags.map((tag) => (
+      <span class="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+        {tag}
+      </span>
+    ))}
+  </div>
+
+  <p class="mt-auto text-sm text-gray-500">⏱ {prepTimeMinutes} min</p>
+</a>

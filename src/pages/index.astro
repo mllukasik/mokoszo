@@ -1,28 +1,72 @@
 ---
+import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import RecipeFilters from '../components/RecipeFilters.astro';
+import RecipeList from '../components/RecipeList.astro';
+
+const recipes = await getCollection('recipes');
+
+// Posortuj przepisy alfabetycznie
+recipes.sort((a, b) => a.data.title.localeCompare(b.data.title, 'pl'));
+
+// Wszystkie unikalne tagi posortowane
+const allTags = [...new Set(recipes.flatMap((r) => r.data.tags))].sort((a, b) =>
+  a.localeCompare(b, 'pl')
+);
+
+// Metadane dla Alpine (tylko to, co potrzebne do filtrowania)
+const recipesMeta = recipes.map((r, index) => ({
+  index,
+  tags: r.data.tags,
+}));
 ---
 
 <Base title="Przepisy">
   <h1 class="mb-6 text-3xl font-bold text-gray-900">Przepisy</h1>
 
-  <!-- Smoke test: Tailwind + Alpine.js -->
-  <div
-    x-data="{ count: 0 }"
-    class="rounded-lg border border-green-200 bg-green-50 p-6"
-  >
-    <p class="mb-4 text-green-800">
-      ✅ Tailwind działa. Alpine.js:
-      <span class="font-bold" x-text="count === 0 ? 'kliknij przycisk →' : `kliknięć: ${count}`">
-        kliknij przycisk →
-      </span>
-    </p>
-    <button
-      x-on:click="count++"
-      class="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-    >
-      Kliknij mnie
-    </button>
+  <div x-data="recipeList()">
+    <RecipeFilters allTags={allTags} />
+    <RecipeList recipes={recipes} />
   </div>
-
-  <p class="mt-8 text-gray-500">Lista przepisów pojawi się tu w Fazie 4.</p>
 </Base>
+
+<script define:vars={{ recipesMeta, allTags }}>
+  function recipeList() {
+    return {
+      activeTags: [],
+      page: 1,
+      perPage: 6,
+
+      get filteredMeta() {
+        if (this.activeTags.length === 0) return recipesMeta;
+        return recipesMeta.filter((r) =>
+          this.activeTags.some((t) => r.tags.includes(t))
+        );
+      },
+
+      get totalPages() {
+        return Math.max(1, Math.ceil(this.filteredMeta.length / this.perPage));
+      },
+
+      get pageNumbers() {
+        return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+      },
+
+      shouldShow(index) {
+        const start = (this.page - 1) * this.perPage;
+        const slice = this.filteredMeta.slice(start, start + this.perPage);
+        return slice.some((r) => r.index === index);
+      },
+
+      toggleTag(tag) {
+        const i = this.activeTags.indexOf(tag);
+        if (i === -1) this.activeTags.push(tag);
+        else this.activeTags.splice(i, 1);
+        this.page = 1;
+      },
+
+      prevPage() { if (this.page > 1) this.page--; },
+      nextPage() { if (this.page < this.totalPages) this.page++; },
+    };
+  }
+</script>

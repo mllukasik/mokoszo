@@ -118,35 +118,35 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T4.1 `RecipeCard.astro`
 **AC:**
-- [ ] Wyświetla tytuł, tagi, czas przygotowania przepisu
-- [ ] Link prowadzi do `/przepis/[slug]`
-- [ ] Responsywna: pełna szerokość na mobile, ograniczona w gridzie na desktop
+- [x] Wyświetla tytuł, tagi, czas przygotowania przepisu
+- [x] Link prowadzi do `/przepis/[slug]`
+- [x] Responsywna: pełna szerokość na mobile, ograniczona w gridzie na desktop
 
 ### T4.2 `index.astro` — lista przepisów
 **AC:**
-- [ ] Renderuje wszystkie przepisy z Content Collection jako `RecipeCard`
-- [ ] Grid: 1 kolumna mobile, 2-3 kolumny desktop (Tailwind `grid-cols-*` + breakpointy)
+- [x] Renderuje wszystkie przepisy z Content Collection jako `RecipeCard`
+- [x] Grid: 1 kolumna mobile, 2-3 kolumny desktop (Tailwind `grid-cols-*` + breakpointy)
 
 ### T4.3 `RecipeFilters.astro` — filtrowanie po tagach
 **AC:**
-- [ ] Lista unikalnych tagów wyliczona ze wszystkich przepisów, renderowana jako klikalne pill/checkbox
-- [ ] Wybór tagu(-ów) filtruje widoczne przepisy po stronie klienta (Alpine), bez przeładowania strony
-- [ ] Możliwość zaznaczenia wielu tagów naraz (logika: przepis pasuje, jeśli ma **którykolwiek** z zaznaczonych tagów — do potwierdzenia, ale przyjmujemy to jako domyślne)
-- [ ] Wyczyszczenie filtrów pokazuje wszystkie przepisy
+- [x] Lista unikalnych tagów wyliczona ze wszystkich przepisów, renderowana jako klikalne pill/checkbox
+- [x] Wybór tagu(-ów) filtruje widoczne przepisy po stronie klienta (Alpine), bez przeładowania strony
+- [x] Możliwość zaznaczenia wielu tagów naraz (logika: przepis pasuje, jeśli ma **którykolwiek** z zaznaczonych tagów — do potwierdzenia, ale przyjmujemy to jako domyślne)
+- [x] Wyczyszczenie filtrów pokazuje wszystkie przepisy
 
 ### T4.4 `RecipeList.astro` — paginacja
 **AC:**
-- [ ] Lista przepisów dzielona na strony po ustalonej liczbie (np. 6/9 na stronę — do dostrojenia)
-- [ ] Paginacja liczona **po przefiltrowanej** liście, nie po całej bazie
-- [ ] Zmiana filtra resetuje widok do strony 1
-- [ ] Przyciski nawigacji (poprzednia/następna lub numery stron) czytelne i klikalne na mobile (odpowiedni touch target)
+- [x] Lista przepisów dzielona na strony po ustalonej liczbie (np. 6/9 na stronę — do dostrojenia)
+- [x] Paginacja liczona **po przefiltrowanej** liście, nie po całej bazie
+- [x] Zmiana filtra resetuje widok do strony 1
+- [x] Przyciski nawigacji (poprzednia/następna lub numery stron) czytelne i klikalne na mobile (odpowiedni touch target)
 
 ### T4.5 `przepis/[slug].astro` — widok szczegółowy
 **AC:**
-- [ ] Wyświetla pełną listę składników z ilościami (sformatowanymi przez `format.ts`)
-- [ ] Wyświetla kroki przygotowania (render Markdown treści)
-- [ ] Wyświetla makra przepisu (z `macros.ts`)
-- [ ] Działa dla każdego z 10 przepisów bez błędów renderowania
+- [x] Wyświetla pełną listę składników z ilościami (sformatowanymi przez `format.ts`)
+- [x] Wyświetla kroki przygotowania (render Markdown treści)
+- [x] Wyświetla makra przepisu (z `macros.ts`)
+- [x] Działa dla każdego z 10 przepisów bez błędów renderowania
 
 ---
 
