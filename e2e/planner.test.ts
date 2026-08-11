@@ -215,9 +215,11 @@ test.describe('Planer — edytor planu', () => {
     await firstDay.getByText('+ wybierz przepis').first().click();
     await waitForPickView(page);
 
-    // Filtr "śniadanie" powinien być aktywny (bg-gray-800)
-    const sniadanieBtn = page.getByRole('button', { name: 'śniadanie' });
-    await expect(sniadanieBtn).toHaveClass(/bg-gray-800/);
+    // Filtr "śniadanie" powinien być aktywny (bg-gray-800).
+    // Używamy exact:true i rounded-full aby nie trafić w karty przepisów
+    // które również zawierają tekst "śniadanie" (jako tag wewnątrz przycisku).
+    const sniadanieBtn = page.locator('button.rounded-full', { hasText: /^śniadanie$/ });
+    await expect(sniadanieBtn.first()).toHaveClass(/bg-gray-800/);
   });
 
   test('"← Wróć do planu" w pickerze cofa do edytora bez zmiany', async ({ page }) => {
@@ -238,8 +240,8 @@ test.describe('Planer — edytor planu', () => {
 
     // Wybrany przepis pojawia się w slocie
     await expect(firstDay).toContainText(recipeName);
-    // Przycisk "+ wybierz przepis" znika
-    await expect(firstDay.getByText('+ wybierz przepis').first()).not.toBeVisible();
+    // Slot 1 (śniadanie) ma teraz 1 mniej pusty przycisk — były 3, zostały 2
+    expect(await firstDay.getByText('+ wybierz przepis').count()).toBe(2);
   });
 
   test('wybrany przepis pokazuje checkmark w pickerze gdy ponownie otwarty', async ({ page }) => {
