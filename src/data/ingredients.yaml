@@ -1,0 +1,578 @@
+# Baza składników — wartości odżywcze na 1 jednostkę danego składnika
+# szt: na 1 sztukę, g: na 1 gram, ml: na 1 mililitr, szczypta: na 1 szczyptę (~0.5g)
+
+# --- WARZYWA ---
+
+- id: cebula
+  displayName: Cebula
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 40
+    protein: 1.1
+    fat: 0.1
+    carbs: 9.3
+
+- id: czosnek
+  displayName: Czosnek (ząbek)
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 4
+    protein: 0.2
+    fat: 0.0
+    carbs: 1.0
+
+- id: marchewka
+  displayName: Marchewka
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 25
+    protein: 0.6
+    fat: 0.1
+    carbs: 5.8
+
+- id: ziemniaki
+  displayName: Ziemniaki
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 0.77
+    protein: 0.02
+    fat: 0.001
+    carbs: 0.17
+
+- id: pomidory
+  displayName: Pomidory
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 0.18
+    protein: 0.009
+    fat: 0.002
+    carbs: 0.039
+
+- id: pomidory-koktajlowe
+  displayName: Pomidory koktajlowe
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 0.18
+    protein: 0.009
+    fat: 0.002
+    carbs: 0.039
+
+- id: ogórek
+  displayName: Ogórek
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 16
+    protein: 0.7
+    fat: 0.1
+    carbs: 3.6
+
+- id: papryka
+  displayName: Papryka
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 31
+    protein: 1.0
+    fat: 0.3
+    carbs: 6.0
+
+- id: cukinia
+  displayName: Cukinia
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 17
+    protein: 1.2
+    fat: 0.3
+    carbs: 3.1
+
+- id: por
+  displayName: Por
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 61
+    protein: 1.5
+    fat: 0.3
+    carbs: 14.2
+
+- id: seler-korzen
+  displayName: Seler (korzeń)
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 0.42
+    protein: 0.015
+    fat: 0.003
+    carbs: 0.09
+
+- id: rzodkiewka
+  displayName: Rzodkiewka
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 1
+    protein: 0.07
+    fat: 0.01
+    carbs: 0.2
+
+- id: szczypiorek
+  displayName: Szczypiorek
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 0.27
+    protein: 0.018
+    fat: 0.004
+    carbs: 0.044
+
+- id: natka-pietruszki
+  displayName: Natka pietruszki
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 0.36
+    protein: 0.03
+    fat: 0.008
+    carbs: 0.063
+
+- id: cebula-czerwona
+  displayName: Cebula czerwona
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 40
+    protein: 1.1
+    fat: 0.1
+    carbs: 9.3
+
+# --- OWOCE ---
+
+- id: banan
+  displayName: Banan
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: owoce
+  nutritionPerUnit:
+    calories: 89
+    protein: 1.1
+    fat: 0.3
+    carbs: 23.0
+
+# --- NABIAŁ ---
+
+- id: jajko
+  displayName: Jajko
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: nabiał
+  nutritionPerUnit:
+    calories: 72
+    protein: 6.3
+    fat: 4.8
+    carbs: 0.4
+
+- id: mleko
+  displayName: Mleko
+  unit:
+    name: mililitr
+    symbol: ml
+  formatting:
+    decimalPlaces: 0
+  category: nabiał
+  nutritionPerUnit:
+    calories: 0.61
+    protein: 0.033
+    fat: 0.032
+    carbs: 0.047
+
+- id: masło
+  displayName: Masło
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: nabiał
+  nutritionPerUnit:
+    calories: 7.17
+    protein: 0.009
+    fat: 0.081
+    carbs: 0.001
+
+- id: smietana-30
+  displayName: Śmietana 30%
+  unit:
+    name: mililitr
+    symbol: ml
+  formatting:
+    decimalPlaces: 0
+  category: nabiał
+  nutritionPerUnit:
+    calories: 2.92
+    protein: 0.021
+    fat: 0.30
+    carbs: 0.027
+
+- id: twaróg
+  displayName: Twaróg
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: nabiał
+  nutritionPerUnit:
+    calories: 0.98
+    protein: 0.111
+    fat: 0.04
+    carbs: 0.027
+
+- id: ser-feta
+  displayName: Ser feta
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: nabiał
+  nutritionPerUnit:
+    calories: 2.64
+    protein: 0.143
+    fat: 0.212
+    carbs: 0.013
+
+# --- MIĘSO ---
+
+- id: mieso-mielone-wolowe
+  displayName: Mięso mielone wołowe
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: mięso
+  nutritionPerUnit:
+    calories: 2.54
+    protein: 0.176
+    fat: 0.20
+    carbs: 0.0
+
+- id: pierś-z-kurczaka
+  displayName: Pierś z kurczaka
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: mięso
+  nutritionPerUnit:
+    calories: 1.65
+    protein: 0.31
+    fat: 0.036
+    carbs: 0.0
+
+# --- ZBOŻA ---
+
+- id: platki-owsiane
+  displayName: Płatki owsiane
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: zboża
+  nutritionPerUnit:
+    calories: 3.89
+    protein: 0.17
+    fat: 0.066
+    carbs: 0.664
+
+- id: maka-pszenna
+  displayName: Mąka pszenna
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: zboża
+  nutritionPerUnit:
+    calories: 3.64
+    protein: 0.1
+    fat: 0.01
+    carbs: 0.76
+
+- id: makaron-spaghetti
+  displayName: Makaron spaghetti
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: zboża
+  nutritionPerUnit:
+    calories: 3.71
+    protein: 0.13
+    fat: 0.015
+    carbs: 0.74
+
+- id: ryż
+  displayName: Ryż
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: zboża
+  nutritionPerUnit:
+    calories: 1.30
+    protein: 0.027
+    fat: 0.003
+    carbs: 0.285
+
+- id: chleb
+  displayName: Chleb
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: zboża
+  nutritionPerUnit:
+    calories: 2.65
+    protein: 0.09
+    fat: 0.032
+    carbs: 0.49
+
+# --- PRZYPRAWY ---
+
+- id: sol
+  displayName: Sól
+  unit:
+    name: szczypta
+    symbol: szczypta
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 0
+    protein: 0
+    fat: 0
+    carbs: 0
+
+- id: pieprz
+  displayName: Pieprz
+  unit:
+    name: szczypta
+    symbol: szczypta
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 0
+    protein: 0
+    fat: 0
+    carbs: 0
+
+- id: cynamon
+  displayName: Cynamon
+  unit:
+    name: szczypta
+    symbol: szczypta
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 0
+    protein: 0
+    fat: 0
+    carbs: 0
+
+- id: oregano
+  displayName: Oregano (suszone)
+  unit:
+    name: szczypta
+    symbol: szczypta
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 0
+    protein: 0
+    fat: 0
+    carbs: 0
+
+- id: papryka-słodka
+  displayName: Papryka słodka (mielona)
+  unit:
+    name: szczypta
+    symbol: szczypta
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 0
+    protein: 0
+    fat: 0
+    carbs: 0
+
+- id: tymianek
+  displayName: Tymianek (suszony)
+  unit:
+    name: szczypta
+    symbol: szczypta
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 0
+    protein: 0
+    fat: 0
+    carbs: 0
+
+- id: cukier
+  displayName: Cukier
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 3.87
+    protein: 0
+    fat: 0
+    carbs: 1.0
+
+- id: miód
+  displayName: Miód
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 3.04
+    protein: 0.003
+    fat: 0
+    carbs: 0.823
+
+# --- OLEJE ---
+
+- id: oliwa-z-oliwek
+  displayName: Oliwa z oliwek
+  unit:
+    name: mililitr
+    symbol: ml
+  formatting:
+    decimalPlaces: 0
+  category: oleje
+  nutritionPerUnit:
+    calories: 8.84
+    protein: 0
+    fat: 1.0
+    carbs: 0
+
+# --- KONSERWY ---
+
+- id: pomidory-z-puszki
+  displayName: Pomidory z puszki (krojone)
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: konserwy
+  nutritionPerUnit:
+    calories: 0.32
+    protein: 0.014
+    fat: 0.003
+    carbs: 0.07
+
+- id: oliwki
+  displayName: Oliwki (czarne, bez pestek)
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: konserwy
+  nutritionPerUnit:
+    calories: 1.15
+    protein: 0.008
+    fat: 0.107
+    carbs: 0.061

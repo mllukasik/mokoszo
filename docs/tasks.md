@@ -47,15 +47,15 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T1.2 Baza składników (`ingredients.yaml`)
 **AC:**
-- [ ] Plik zawiera wszystkie składniki potrzebne do 10 startowych przepisów
-- [ ] Każdy wpis ma komplet pól: `id`, `displayName`, `unit`, `formatting`, `category`, `nutritionPerUnit`
-- [ ] `id` jest unikalny i w kebab-case
+- [x] Plik zawiera wszystkie składniki potrzebne do 10 startowych przepisów
+- [x] Każdy wpis ma komplet pól: `id`, `displayName`, `unit`, `formatting`, `category`, `nutritionPerUnit`
+- [x] `id` jest unikalny i w kebab-case
 
 ### T1.3 Napisanie 10 przepisów
 **AC:**
-- [ ] 10 plików `.md` w `src/content/recipes/`, każdy z poprawnym frontmatterem i krokami w treści
-- [ ] Wszystkie `ingredientId` użyte w przepisach istnieją w `ingredients.yaml`
-- [ ] Każdy przepis ma min. 1 tag (pod filtrowanie z Fazy 4)
+- [x] 10 plików `.md` w `src/content/recipes/`, każdy z poprawnym frontmatterem i krokami w treści
+- [x] Wszystkie `ingredientId` użyte w przepisach istnieją w `ingredients.yaml`
+- [x] Każdy przepis ma min. 1 tag (pod filtrowanie z Fazy 4)
 
 ### T1.4 Walidacja spójności danych (build-time)
 **AC:**
