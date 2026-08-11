@@ -103,14 +103,14 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T3.1 Interfejs `MealPlanRepository`
 **AC:**
-- [ ] Interfejs definiuje `getPlan(): MealPlan | null`, `savePlan(plan: MealPlan): void`, `clearPlan(): void`
-- [ ] Żaden komponent UI nie odwołuje się bezpośrednio do `localStorage` — zawsze przez ten interfejs
+- [x] Interfejs definiuje `getPlan(): MealPlan | null`, `savePlan(plan: MealPlan): void`, `clearPlan(): void`
+- [x] Żaden komponent UI nie odwołuje się bezpośrednio do `localStorage` — zawsze przez ten interfejs
 
 ### T3.2 Implementacja `LocalStorageMealPlanRepository`
 **AC:**
-- [ ] Zapisuje/odczytuje plan pod ustalonym kluczem w `localStorage`, w formacie zgodnym z `MealPlan` (z polem `version`)
-- [ ] Odczyt brakującego/uszkodzonego wpisu nie rzuca wyjątkiem — zwraca `null` (traktowane jako brak planu)
-- [ ] Testy jednostkowe (z mockiem `localStorage` lub w jsdom): zapis→odczyt zwraca ten sam plan, `clearPlan` faktycznie czyści dane
+- [x] Zapisuje/odczytuje plan pod ustalonym kluczem w `localStorage`, w formacie zgodnym z `MealPlan` (z polem `version`)
+- [x] Odczyt brakującego/uszkodzonego wpisu nie rzuca wyjątkiem — zwraca `null` (traktowane jako brak planu)
+- [x] Testy jednostkowe (z mockiem `localStorage` lub w jsdom): zapis→odczyt zwraca ten sam plan, `clearPlan` faktycznie czyści dane
 
 ---
 
