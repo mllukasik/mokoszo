@@ -1,145 +1,319 @@
+/**
+ * Testy plannera jadłospisu — nowy UX (v2):
+ *   - lista planów (widok 'list')
+ *   - tworzenie planu z zakresem dat (widok 'create')
+ *   - edytor dni i posiłków (widok 'edit')
+ */
 import { test, expect, type Page } from '@playwright/test';
 
 const PLAN_URL = '/mokoszo/plan/';
+const PLANS_KEY = 'mokoszo:plans:v2';
 
-/**
- * Czeka aż Alpine wykona x-for i doda karty dni do DOM.
- * Przed Alpine-init siatka jest pusta (karty żyją w <template x-for>).
- */
-async function waitForDays(page: Page, expected = 3) {
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+async function clearPlans(page: Page) {
+  await page.evaluate((key) => localStorage.removeItem(key), PLANS_KEY);
+}
+
+/** Czeka aż Alpine renderuje widok listy planów (x-cloak zdejmuje ukrycie). */
+async function waitForListView(page: Page) {
   await page.waitForFunction(
-    (n: number) => document.querySelectorAll('[x-data] .grid > div.flex').length === n,
-    expected,
+    () => {
+      // Przycisk "Nowy plan" jest widoczny gdy view === 'list'
+      const btn = Array.from(document.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === '+ Nowy plan'
+      );
+      if (!btn) return false;
+      return window.getComputedStyle(btn).display !== 'none';
+    },
     { timeout: 10_000 }
   );
 }
 
-/** Zlicza karty dni w DOM. */
-async function dayCardCount(page: Page) {
-  return page.evaluate(
-    () => document.querySelectorAll('[x-data] .grid > div.flex').length
+/** Czeka aż widok tworzenia planu jest widoczny. */
+async function waitForCreateView(page: Page) {
+  await page.waitForSelector('#plan-start', { state: 'visible', timeout: 8_000 });
+}
+
+/** Czeka aż widok edytora jest widoczny i ma co najmniej `n` kart dni. */
+async function waitForEditView(page: Page, minDays = 1) {
+  await page.waitForFunction(
+    (n: number) => {
+      // Przycisk "← Plany" jest obecny tylko w edytorze
+      const back = Array.from(document.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === '← Plany'
+      );
+      if (!back || window.getComputedStyle(back).display === 'none') return false;
+      // Karty dni (rounded-xl w .space-y-4)
+      const cards = document.querySelectorAll('.space-y-4 > div.rounded-xl');
+      return cards.length >= n;
+    },
+    minDays,
+    { timeout: 10_000 }
   );
 }
 
-test.describe('Planer jadłospisu', () => {
+/** Tworzy plan przez UI. Zwraca po przejściu do widoku edytora. */
+async function createPlanViaUI(page: Page, start: string, end: string) {
+  await page.getByRole('button', { name: '+ Nowy plan' }).click();
+  await waitForCreateView(page);
+  await page.fill('#plan-start', start);
+  await page.fill('#plan-end', end);
+  await page.getByRole('button', { name: 'Utwórz plan' }).click();
+}
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
+test.describe('Planer — widok listy planów', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(PLAN_URL);
-    // Wyczyść localStorage i odświeź — pewny stan testowy
-    await page.evaluate(() => localStorage.removeItem('mokoszo:meal-plan:v1'));
+    await clearPlans(page);
     await page.reload();
-    await waitForDays(page, 3);
+    await waitForListView(page);
   });
 
-  test('wyświetla nagłówek strony', async ({ page }) => {
+  test('wyświetla tytuł strony', async ({ page }) => {
     await expect(page).toHaveTitle(/Plan jadłospisu/);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Plan jadłospisu');
   });
 
-  test('domyślnie wyświetla 3 karty dni', async ({ page }) => {
-    expect(await dayCardCount(page)).toBe(3);
+  test('wyświetla nagłówek "Moje plany"', async ({ page }) => {
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Moje plany');
   });
 
-  test('"+" zwiększa liczbę dni do 4', async ({ page }) => {
-    await page.getByRole('button', { name: 'Zwiększ liczbę dni' }).click();
-    await waitForDays(page, 4);
-    expect(await dayCardCount(page)).toBe(4);
+  test('wyświetla stan pusty gdy brak planów', async ({ page }) => {
+    await expect(page.getByText('Brak planów')).toBeVisible();
   });
 
-  test('"−" zmniejsza liczbę dni do 2', async ({ page }) => {
-    await page.getByRole('button', { name: 'Zmniejsz liczbę dni' }).click();
-    await waitForDays(page, 2);
-    expect(await dayCardCount(page)).toBe(2);
+  test('przycisk "Nowy plan" jest widoczny', async ({ page }) => {
+    await expect(page.getByRole('button', { name: '+ Nowy plan' })).toBeVisible();
+  });
+});
+
+test.describe('Planer — tworzenie nowego planu', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(PLAN_URL);
+    await clearPlans(page);
+    await page.reload();
+    await waitForListView(page);
   });
 
-  test('"−" jest wyłączony przy 1 dniu', async ({ page }) => {
-    const minusBtn = page.getByRole('button', { name: 'Zmniejsz liczbę dni' });
-    await minusBtn.click(); // 3 → 2
-    await waitForDays(page, 2);
-    await minusBtn.click(); // 2 → 1
-    await waitForDays(page, 1);
-    await expect(minusBtn).toBeDisabled();
+  test('kliknięcie "Nowy plan" pokazuje formularz z polami dat', async ({ page }) => {
+    await page.getByRole('button', { name: '+ Nowy plan' }).click();
+    await waitForCreateView(page);
+
+    await expect(page.locator('#plan-start')).toBeVisible();
+    await expect(page.locator('#plan-end')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Utwórz plan' })).toBeVisible();
   });
 
-  test('wybór przepisu pojawia się na liście wybranych w danym dniu', async ({ page }) => {
-    const firstCard = page.locator('[x-data] .grid > div.flex').first();
-    const recipePill = firstCard.getByRole('button').first();
-    const recipeName = (await recipePill.textContent())!.trim();
-
-    await recipePill.click();
-    await page.waitForTimeout(300);
-
-    // Checkmark i tytuł powinny się pojawić
-    await expect(firstCard.locator('text=✓')).toBeVisible();
-    await expect(firstCard).toContainText(recipeName);
+  test('"Wróć" cofa do listy planów', async ({ page }) => {
+    await page.getByRole('button', { name: '+ Nowy plan' }).click();
+    await waitForCreateView(page);
+    await page.getByRole('button', { name: '← Wróć' }).click();
+    await waitForListView(page);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Moje plany');
   });
 
-  test('wybrany przepis można odznaczyć', async ({ page }) => {
-    const firstCard = page.locator('[x-data] .grid > div.flex').first();
-    const btn = firstCard.getByRole('button').first();
+  test('formularz pokazuje liczbę dni dla wybranego zakresu', async ({ page }) => {
+    await page.getByRole('button', { name: '+ Nowy plan' }).click();
+    await waitForCreateView(page);
+    await page.fill('#plan-start', '2026-08-12');
+    await page.fill('#plan-end', '2026-08-14');
+    // Powinno pokazać "Plan obejmie 3 dni."
+    await expect(page.getByText('3 dni')).toBeVisible();
+  });
 
-    await btn.click(); // zaznacz
+  test('błąd gdy data końcowa wcześniejsza niż początkowa', async ({ page }) => {
+    await page.getByRole('button', { name: '+ Nowy plan' }).click();
+    await waitForCreateView(page);
+    await page.fill('#plan-start', '2026-08-14');
+    await page.fill('#plan-end', '2026-08-12');
+    await expect(page.getByText('Data końcowa musi być po dacie')).toBeVisible();
+  });
+
+  test('tworzenie 3-dniowego planu → edytor z 3 kartami dni', async ({ page }) => {
+    await createPlanViaUI(page, '2026-08-12', '2026-08-14');
+    await waitForEditView(page, 3);
+
+    const dayCounts = await page.locator('.space-y-4 > div.rounded-xl').count();
+    expect(dayCounts).toBe(3);
+  });
+
+  test('każda karta dnia ma 3 domyślne sloty: śniadanie, obiad, kolacja', async ({ page }) => {
+    await createPlanViaUI(page, '2026-08-12', '2026-08-12');
+    await waitForEditView(page, 1);
+
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await expect(firstDay).toContainText('śniadanie');
+    await expect(firstDay).toContainText('obiad');
+    await expect(firstDay).toContainText('kolacja');
+  });
+
+  test('plan pojawia się na liście po powrocie do "Plany"', async ({ page }) => {
+    await createPlanViaUI(page, '2026-08-12', '2026-08-13');
+    await waitForEditView(page, 2);
+    await page.getByRole('button', { name: '← Plany' }).click();
+    await waitForListView(page);
+
+    // Karta planu powinna być widoczna (szuka daty w krótkim formacie)
+    await expect(page.locator('.grid > div').filter({ hasText: 'sie' }).first()).toBeVisible();
+  });
+});
+
+test.describe('Planer — edytor planu', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(PLAN_URL);
+    await clearPlans(page);
+    await page.reload();
+    await waitForListView(page);
+    await createPlanViaUI(page, '2026-08-12', '2026-08-14');
+    await waitForEditView(page, 3);
+  });
+
+  test('nagłówek edytora pokazuje zakres dat planu', async ({ page }) => {
+    // h1 w edytorze powinien zawierać krótki format daty
+    const heading = page.locator('h1').filter({ visible: true });
+    await expect(heading).toContainText('sie');
+  });
+
+  test('można wybrać przepis dla slotu śniadanie w dniu 1', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+
+    // Kliknij "wybierz przepis" w pierwszym slocie (śniadanie)
+    await firstDay.getByText('+ wybierz przepis').first().click();
+
+    // Pojawi się picker z przepisami
+    const picker = firstDay.locator('.flex.flex-wrap.gap-1\\.5');
+    await expect(picker.first()).toBeVisible();
+
+    // Kliknij pierwszy przepis w pickerze
+    const firstRecipeBtn = picker.first().getByRole('button').first();
+    const recipeName = (await firstRecipeBtn.textContent())!.trim();
+    await firstRecipeBtn.click();
+
+    // Wybrany przepis pojawia się w slocie
+    await expect(firstDay).toContainText(recipeName);
+  });
+
+  test('wybrany przepis można wyczyścić (✕)', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+
+    // Wybierz przepis
+    await firstDay.getByText('+ wybierz przepis').first().click();
+    await firstDay.locator('.flex.flex-wrap.gap-1\\.5').first().getByRole('button').first().click();
     await page.waitForTimeout(200);
-    await btn.click(); // odznacz
+
+    // Wyczyść przez ✕
+    await firstDay.getByRole('button', { name: 'Usuń przepis' }).first().click();
     await page.waitForTimeout(200);
 
-    await expect(firstCard.locator('text=✓')).not.toBeVisible();
-    await expect(firstCard.locator('text=Brak wybranych przepisów')).toBeVisible();
+    // Slot znów pokazuje "+ wybierz przepis"
+    await expect(firstDay.getByText('+ wybierz przepis').first()).toBeVisible();
+  });
+
+  test('można dodać własny slot w dniu 1', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    const slotsBefore = await firstDay.locator('.space-y-2 > div.rounded-lg').count();
+
+    await firstDay.getByRole('button', { name: '+ Dodaj posiłek' }).click();
+    await page.waitForTimeout(200);
+
+    const slotsAfter = await firstDay.locator('.space-y-2 > div.rounded-lg').count();
+    expect(slotsAfter).toBe(slotsBefore + 1);
+
+    // Nowy slot zawiera tekst "Własny posiłek"
+    await expect(firstDay.locator('.space-y-2 > div.rounded-lg').last()).toContainText(
+      'Własny posiłek'
+    );
+  });
+
+  test('własny slot można usunąć', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await firstDay.getByRole('button', { name: '+ Dodaj posiłek' }).click();
+    await page.waitForTimeout(200);
+
+    const slotsBefore = await firstDay.locator('.space-y-2 > div.rounded-lg').count();
+
+    await firstDay.getByRole('button', { name: 'Usuń posiłek' }).last().click();
+    await page.waitForTimeout(200);
+
+    const slotsAfter = await firstDay.locator('.space-y-2 > div.rounded-lg').count();
+    expect(slotsAfter).toBe(slotsBefore - 1);
   });
 
   test('plan persystuje po odświeżeniu strony', async ({ page }) => {
-    const firstCard = page.locator('[x-data] .grid > div.flex').first();
-    const btn = firstCard.getByRole('button').first();
-    const recipeName = (await btn.textContent())!.trim();
-
-    await btn.click();
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await firstDay.getByText('+ wybierz przepis').first().click();
+    const recipePill = firstDay.locator('.flex.flex-wrap.gap-1\\.5').first().getByRole('button').first();
+    const recipeName = (await recipePill.textContent())!.trim();
+    await recipePill.click();
     await page.waitForTimeout(300);
 
     await page.reload();
-    await waitForDays(page, 3);
+    // Po przeładowaniu: lista planów (Alpine resetuje view do 'list')
+    await waitForListView(page);
 
-    const reloaded = page.locator('[x-data] .grid > div.flex').first();
-    await expect(reloaded.locator('text=✓')).toBeVisible();
-    await expect(reloaded).toContainText(recipeName);
+    // Plan jest na liście — możemy go otworzyć
+    await page.locator('.grid > div').filter({ hasText: 'sie' }).first()
+      .getByRole('button', { name: 'Edytuj' }).click();
+    await waitForEditView(page, 3);
+
+    // Wybrany przepis jest zapamiętany
+    await expect(page.locator('.space-y-4 > div.rounded-xl').first()).toContainText(recipeName);
   });
 
-  test('CTA do listy zakupów pojawia się po wybraniu przepisu', async ({ page }) => {
-    // Targetujemy konkretnie CTA w <main> (nie link w nawigacji)
-    const cta = page.locator('main a[href*="lista-zakupow"]');
-    await expect(cta).not.toBeVisible();
-
-    await page.locator('[x-data] .grid > div.flex').first().getByRole('button').first().click();
-    await page.waitForTimeout(300);
-
-    await expect(cta).toBeVisible();
+  test('przycisk "Lista zakupów" wyłączony gdy brak przepisów', async ({ page }) => {
+    const shoppingBtn = page.getByRole('button', { name: '🛒 Lista zakupów' });
+    await expect(shoppingBtn).toBeDisabled();
   });
 
-  test('"Wyczyść plan" usuwa wszystkie wybory', async ({ page }) => {
-    // Zaznacz przepis
-    await page.locator('[x-data] .grid > div.flex').first().getByRole('button').first().click();
+  test('przycisk "Lista zakupów" aktywny po wybraniu przepisu', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await firstDay.getByText('+ wybierz przepis').first().click();
+    await firstDay.locator('.flex.flex-wrap.gap-1\\.5').first().getByRole('button').first().click();
     await page.waitForTimeout(200);
 
-    await page.getByRole('button', { name: 'Wyczyść plan' }).click();
-    await page.waitForTimeout(300);
+    const shoppingBtn = page.getByRole('button', { name: '🛒 Lista zakupów' });
+    await expect(shoppingBtn).toBeEnabled();
+  });
+});
 
-    const allCards = page.locator('[x-data] .grid > div.flex');
-    const count = await allCards.count();
-    for (let i = 0; i < count; i++) {
-      await expect(allCards.nth(i).locator('text=Brak wybranych przepisów')).toBeVisible();
-    }
+test.describe('Planer — usuwanie i wiele planów', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(PLAN_URL);
+    await clearPlans(page);
+    await page.reload();
+    await waitForListView(page);
   });
 
-  test('zwiększenie dni zachowuje istniejące wybory', async ({ page }) => {
-    const firstCard = page.locator('[x-data] .grid > div.flex').first();
-    const btn = firstCard.getByRole('button').first();
-    const recipeName = (await btn.textContent())!.trim();
+  test('można usunąć plan z listy', async ({ page }) => {
+    // Utwórz plan
+    await createPlanViaUI(page, '2026-08-12', '2026-08-12');
+    await waitForEditView(page, 1);
+    await page.getByRole('button', { name: '← Plany' }).click();
+    await waitForListView(page);
 
-    await btn.click();
-    await page.waitForTimeout(200);
+    // Usuń
+    page.on('dialog', (dialog) => dialog.accept()); // confirm() → OK
+    await page.locator('.grid > div').first().getByRole('button', { name: 'Usuń' }).click();
+    await page.waitForTimeout(300);
 
-    await page.getByRole('button', { name: 'Zwiększ liczbę dni' }).click();
-    await waitForDays(page, 4);
+    // Lista pusta
+    await expect(page.getByText('Brak planów')).toBeVisible();
+  });
 
-    // Dzień 1 wciąż ma wybrany przepis
-    await expect(page.locator('[x-data] .grid > div.flex').first()).toContainText(recipeName);
+  test('można mieć wiele planów jednocześnie', async ({ page }) => {
+    await createPlanViaUI(page, '2026-08-12', '2026-08-12');
+    await waitForEditView(page, 1);
+    await page.getByRole('button', { name: '← Plany' }).click();
+    await waitForListView(page);
+
+    await createPlanViaUI(page, '2026-09-01', '2026-09-03');
+    await waitForEditView(page, 3);
+    await page.getByRole('button', { name: '← Plany' }).click();
+    await waitForListView(page);
+
+    const cards = page.locator('.grid > div');
+    expect(await cards.count()).toBe(2);
   });
 });

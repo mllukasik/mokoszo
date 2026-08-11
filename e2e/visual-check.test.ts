@@ -99,25 +99,20 @@ test.describe('Wizualna weryfikacja aplikacji', () => {
   // ─── Planer ─────────────────────────────────────────────────────────────────
   test('plan: stan początkowy', async ({ page }) => {
     await page.goto('/mokoszo/plan/');
-    await page.evaluate(() => localStorage.removeItem('mokoszo:meal-plan:v1'));
+    await page.evaluate(() => localStorage.removeItem('mokoszo:plans:v2'));
     await page.reload();
     await page.waitForTimeout(3000);
     await page.screenshot({ path: `${SCREENS}/07-plan-initial.png`, fullPage: true });
 
-    const hasMealPlanner = await page.evaluate(() => typeof window.mealPlanner);
-    console.log('window.mealPlanner typeof:', hasMealPlanner);
+    const hasPlannerApp = await page.evaluate(() => typeof window.plannerApp);
+    console.log('window.plannerApp typeof:', hasPlannerApp);
 
-    // Sprawdź ile kart dni wygenerował x-for
-    const dayCards = await page.evaluate(() =>
-      document.querySelectorAll('[x-data] .grid > div.flex').length
-    );
-    console.log('Karty dni (div.flex):', dayCards);
-
-    // Szerszy selector — sprawdź w ogóle .grid > div
-    const gridDivs = await page.evaluate(() =>
-      document.querySelectorAll('[x-data] .grid > div').length
-    );
-    console.log('Karty dni (.grid > div):', gridDivs);
+    // Lista planów — brak planów → stan pusty
+    const emptyVisible = await page.evaluate(() => {
+      const el = Array.from(document.querySelectorAll('p')).find(p => p.textContent?.includes('Brak planów'));
+      return el ? window.getComputedStyle(el).display !== 'none' : false;
+    });
+    console.log('Stan pusty widoczny:', emptyVisible);
 
     // Sprawdź co jest w grid
     const gridHTML = await page.evaluate(() =>
@@ -128,17 +123,17 @@ test.describe('Wizualna weryfikacja aplikacji', () => {
 
   test('plan: wybór przepisu', async ({ page }) => {
     await page.goto('/mokoszo/plan/');
-    await page.evaluate(() => localStorage.removeItem('mokoszo:meal-plan:v1'));
+    await page.evaluate(() => localStorage.removeItem('mokoszo:plans:v2'));
     await page.reload();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(2000);
 
-    // Klik w pierwszy przycisk przepisu w pierwszej karcie
-    const buttons = page.locator('[x-data] .grid .rounded-full');
-    const count = await buttons.count();
+    // Utwórz nowy plan przez UI
+    const newPlanBtn = page.locator('button').filter({ hasText: '+ Nowy plan' });
+    const count = await newPlanBtn.count();
     console.log('Liczba pill-buttonów:', count);
 
     if (count > 0) {
-      await buttons.first().click();
+      await newPlanBtn.click();
       await page.waitForTimeout(500);
       await page.screenshot({ path: `${SCREENS}/08-plan-recipe-selected.png`, fullPage: true });
     }

@@ -6,18 +6,38 @@ import { test } from '@playwright/test';
 import * as path from 'path';
 
 const SC = path.resolve('e2e/screenshots');
-const STORAGE_KEY = 'mokoszo:meal-plan:v1';
+const PLANS_KEY = 'mokoszo:plans:v2';
 
-async function setPlan(page, days) {
+async function setPlan(page, days: { date: string; recipeIds: string[] }[]) {
+  const planId = 'visual-test-plan';
+  const storage = {
+    version: 2,
+    plans: [
+      {
+        id: planId,
+        days: days.map((d) => ({
+          date: d.date,
+          slots: d.recipeIds.map((id, i) => ({
+            id: `s-${d.date}-${i}`,
+            name: i === 0 ? 'śniadanie' : i === 1 ? 'obiad' : 'kolacja',
+            recipeId: id,
+            isCustom: false,
+          })),
+        })),
+        createdAt: '2026-08-11T12:00:00.000Z',
+      },
+    ],
+    activeForShopping: planId,
+  };
   await page.evaluate(
-    ({ key, plan }) => localStorage.setItem(key, JSON.stringify(plan)),
-    { key: STORAGE_KEY, plan: { version: 1, days } }
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    { key: PLANS_KEY, data: storage }
   );
 }
 
 test('lista: stan pusty', async ({ page }) => {
   await page.goto('/mokoszo/lista-zakupow/');
-  await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
+  await page.evaluate((key) => localStorage.removeItem(key), PLANS_KEY);
   await page.reload();
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${SC}/10-shopping-empty.png`, fullPage: true });

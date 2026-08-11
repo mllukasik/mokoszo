@@ -51,16 +51,46 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
-// ─── MealPlan ──────────────────────────────────────────────────────────────────
+// ─── MealPlan v1 (legacy — zachowane dla referencji) ──────────────────────────
+
+/** @deprecated Używane tylko przez stare testy. Nowy format: MealPlanV2 */
+export interface MealPlanDayV1 {
+  date: string;
+  recipeIds: string[];
+}
+
+/** @deprecated Stary format localStorage. Nowy: MealPlanV2 */
+export interface MealPlanV1 {
+  version: 1;
+  days: MealPlanDayV1[];
+}
+
+// ─── MealPlan v2 ───────────────────────────────────────────────────────────────
+
+/** Pojedynczy posiłek w ramach dnia (np. śniadanie, obiad, kolacja lub własny). */
+export interface MealSlot {
+  id: string;          // unikalny identyfikator slotu (np. "a3b2c1")
+  name: string;        // "śniadanie" | "obiad" | "kolacja" | nazwa własna
+  recipeId: string | null;
+  isCustom: boolean;   // true = użytkownik dodał własny posiłek
+}
 
 export interface MealPlanDay {
   date: string;        // ISO date, np. "2026-08-12"
-  recipeIds: string[]; // przepisy na ten dzień
+  slots: MealSlot[];   // posiłki na ten dzień
 }
 
 export interface MealPlan {
-  version: 1;
+  id: string;          // unikalny identyfikator planu
   days: MealPlanDay[];
+  createdAt: string;   // ISO datetime
+}
+
+/** Format przechowywany w localStorage pod kluczem 'mokoszo:plans:v2'. */
+export interface PlansStorage {
+  version: 2;
+  plans: MealPlan[];
+  activeForShopping: string | null; // id planu wybranego do listy zakupów
 }
 
 // ─── Shopping list ─────────────────────────────────────────────────────────────

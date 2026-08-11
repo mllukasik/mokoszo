@@ -1,30 +1,54 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const URL = '/mokoszo/lista-zakupow/';
-const STORAGE_KEY = 'mokoszo:meal-plan:v1';
+const PLANS_KEY = 'mokoszo:plans:v2';
 
-type Day = { date: string; recipeIds: string[] };
+type DaySpec = { date: string; recipeIds: string[] };
 
-async function setPlan(page, days: Day[]) {
+/**
+ * Tworzy i zapisuje plan v2 do localStorage.
+ * recipeGroups to lista dni z przypisanymi przepisami (każdy przepis = osobny slot).
+ */
+async function setPlan(page: Page, days: DaySpec[]) {
+  const planId = 'test-plan-1';
+  const storage = {
+    version: 2,
+    plans: [
+      {
+        id: planId,
+        days: days.map((g) => ({
+          date: g.date,
+          slots: g.recipeIds.map((id, i) => ({
+            id: `s-${g.date}-${i}`,
+            name: i === 0 ? 'śniadanie' : i === 1 ? 'obiad' : 'kolacja',
+            recipeId: id,
+            isCustom: false,
+          })),
+        })),
+        createdAt: '2026-08-11T12:00:00.000Z',
+      },
+    ],
+    activeForShopping: planId,
+  };
   await page.evaluate(
-    ({ key, plan }) => localStorage.setItem(key, JSON.stringify(plan)),
-    { key: STORAGE_KEY, plan: { version: 1, days } }
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    { key: PLANS_KEY, data: storage }
   );
 }
 
-async function clearPlan(page) {
-  await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
+async function clearPlan(page: Page) {
+  await page.evaluate((key) => localStorage.removeItem(key), PLANS_KEY);
 }
 
 /** Czeka aż Alpine przetworzy shoppingListPage i pokaże odpowiedni widok. */
-async function waitForContent(page) {
+async function waitForContent(page: Page) {
   await page.waitForFunction(
     () => {
       const empty = document.querySelector('[x-show="isEmpty"]');
       const full  = document.querySelector('[x-show="!isEmpty"]');
       if (!empty || !full) return false;
-      const eStyle = window.getComputedStyle(empty).display;
-      const fStyle = window.getComputedStyle(full).display;
+      const eStyle = window.getComputedStyle(empty as HTMLElement).display;
+      const fStyle = window.getComputedStyle(full as HTMLElement).display;
       return eStyle !== 'none' || fStyle !== 'none';
     },
     { timeout: 8_000 }
@@ -42,6 +66,22 @@ test.describe('Lista zakupów — T6.1', () => {
 
     await expect(page.locator('[x-show="isEmpty"]')).toBeVisible();
     await expect(page.locator('[x-show="!isEmpty"]')).not.toBeVisible();
+  });
+
+  test('stan pusty gdy plans:v2 nie ma activeForShopping', async ({ page }) => {
+    await page.goto(URL);
+    // Zapis planu bez activeForShopping
+    await page.evaluate(
+      ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+      {
+        key: PLANS_KEY,
+        data: { version: 2, plans: [], activeForShopping: null },
+      }
+    );
+    await page.reload();
+    await waitForContent(page);
+
+    await expect(page.locator('[x-show="isEmpty"]')).toBeVisible();
   });
 
   test('stan pusty zawiera link do /plan/', async ({ page }) => {
@@ -72,6 +112,16 @@ test.describe('Lista zakupów — T6.1', () => {
 
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista zakupów');
     await expect(page).toHaveTitle(/Lista zakupów/);
+  });
+
+  test('wyświetla nazwę planu (datę) jako podtytuł', async ({ page }) => {
+    await page.goto(URL);
+    await setPlan(page, [{ date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] }]);
+    await page.reload();
+    await waitForContent(page);
+
+    // Podtytuł z datą planu
+    await expect(page.locator('[x-show="!isEmpty"] p[x-show="planName"]')).toBeVisible();
   });
 });
 
@@ -150,16 +200,9 @@ test.describe('Lista zakupów — T6.2 ShoppingList', () => {
 
   test('ten sam składnik z 2 przepisów jest zsumowany (1 wpis)', async ({ page }) => {
     // zupa-pomidorowa i zupa-jarzynowa obie mają cebulę/marchewkę
-    await page.evaluate(
-      ({ key, plan }) => localStorage.setItem(key, JSON.stringify(plan)),
-      {
-        key: STORAGE_KEY,
-        plan: {
-          version: 1,
-          days: [{ date: '2026-08-11', recipeIds: ['zupa-pomidorowa', 'zupa-jarzynowa'] }],
-        },
-      }
-    );
+    await setPlan(page, [
+      { date: '2026-08-11', recipeIds: ['zupa-pomidorowa', 'zupa-jarzynowa'] },
+    ]);
     await page.reload();
     await waitForContent(page);
 
@@ -194,9 +237,7 @@ test.describe('Lista zakupów — T6.3 MacrosSummary', () => {
   });
 
   test('wyświetla białko, tłuszcze i węglowodany', async ({ page }) => {
-    // Etykiety makr to p.text-xs.uppercase w sekcji makr — "tłuszcze" może też
-    // wystąpić w nazwie kategorii "Oleje i tłuszcze", więc używamy exact match
-    const macroSection = page.locator('section').first(); // Makra są w pierwszej sekcji
+    const macroSection = page.locator('section').first();
     await expect(macroSection.locator('text=białko')).toBeVisible();
     await expect(macroSection.getByText('tłuszcze', { exact: true })).toBeVisible();
     await expect(macroSection.locator('text=węglowodany')).toBeVisible();

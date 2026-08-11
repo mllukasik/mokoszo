@@ -67,12 +67,15 @@ const categoryLabels: Record<string, string> = {
     <!-- Zawartość — widoczna gdy plan niepusty -->
     <div x-show="!isEmpty" style="display:none">
       <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 class="text-3xl font-bold text-gray-900">Lista zakupów</h1>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Lista zakupów</h1>
+          <p x-show="planName" class="mt-0.5 text-sm text-gray-500" x-text="planName"></p>
+        </div>
         <a
           href={`${base}plan/`}
           class="inline-flex min-h-[44px] items-center text-sm text-gray-500 hover:text-gray-700"
         >
-          ← Wróć do planu
+          ← Wróć do planów
         </a>
       </div>
 
@@ -87,17 +90,22 @@ const categoryLabels: Record<string, string> = {
 </Base>
 
 <script define:vars={{ recipesMap, ingredientsMap, CATEGORY_ORDER, categoryLabels }}>
-  const STORAGE_KEY = 'mokoszo:meal-plan:v1';
+  const PLANS_KEY = 'mokoszo:plans:v2';
 
   window.shoppingListPage = function shoppingListPage() {
-    /** Wczytuje plan z localStorage — zwraca null jeśli brak lub uszkodzony. */
-    function loadPlan() {
+    /**
+     * Wczytuje aktywny plan (wskazany przez activeForShopping) z nowego formatu v2.
+     * Zwraca null jeśli brak danych lub uszkodzony wpis.
+     */
+    function loadActivePlan() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(PLANS_KEY);
         if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        if (parsed.version !== 1 || !Array.isArray(parsed.days)) return null;
-        return parsed;
+        const p = JSON.parse(raw);
+        if (p.version !== 2 || !Array.isArray(p.plans)) return null;
+        const id = p.activeForShopping;
+        if (!id) return null;
+        return p.plans.find((plan) => plan.id === id) ?? null;
       } catch {
         return null;
       }
@@ -174,9 +182,22 @@ const categoryLabels: Record<string, string> = {
       checked: {},    // { [ingredientId]: boolean } — tylko sesja, bez persystencji
       openCats: {},   // { [category]: boolean } — zwinięte/rozwinięte
 
-      /** Czy plan jest pusty (brak lub żaden dzień nie ma przepisów). */
+      /** Czy plan jest pusty (brak lub żaden slot nie ma przepisu). */
       get isEmpty() {
-        return !this.plan || !this.plan.days.some((d) => d.recipeIds.length > 0);
+        return !this.plan || !this.plan.days.some((d) =>
+          (d.slots ?? []).some((s) => s.recipeId)
+        );
+      },
+
+      /** Etykieta planu (zakres dat) do wyświetlenia jako podtytuł. */
+      get planName() {
+        if (!this.plan || !this.plan.days.length) return '';
+        const days = this.plan.days;
+        const fmt = (iso) =>
+          new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long' })
+            .format(new Date(iso + 'T12:00:00'));
+        if (days.length === 1) return fmt(days[0].date);
+        return `${fmt(days[0].date)} – ${fmt(days[days.length - 1].date)}`;
       },
 
       /** Kategorie w kolejności z CATEGORY_ORDER, tylko te z zawartością. */
@@ -193,9 +214,12 @@ const categoryLabels: Record<string, string> = {
       },
 
       init() {
-        this.plan = loadPlan();
+        this.plan = loadActivePlan();
         if (!this.isEmpty) {
-          const allIds = this.plan.days.flatMap((d) => d.recipeIds);
+          // Zbierz wszystkie recipeId ze slotów wszystkich dni
+          const allIds = this.plan.days.flatMap((d) =>
+            (d.slots ?? []).map((s) => s.recipeId).filter(Boolean)
+          );
           this.list   = buildList(allIds);
           this.macros = computeMacros(allIds);
           // Wszystkie kategorie domyślnie rozwinięte

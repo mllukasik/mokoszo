@@ -1,24 +1,47 @@
 /**
  * Testy 1 i 2:
- *   1. Full E2E flow: przeglądanie → plan → lista zakupów
+ *   1. Full E2E flow: przeglądanie → tworzenie planu → lista zakupów
  *   2. Poprawność danych: ilości składników i makra przy skalowaniu planu
  */
 import { test, expect, type Page } from '@playwright/test';
 
-const STORAGE_KEY = 'mokoszo:meal-plan:v1';
+const PLANS_KEY = 'mokoszo:plans:v2';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Storage helpers ─────────────────────────────────────────────────────────
 
-async function setPlan(page: Page, days: { date: string; recipeIds: string[] }[]) {
+/** Tworzy v2-plan z listą dni i recipeIds, ustawia activeForShopping. */
+async function setPlanV2(page: Page, days: { date: string; recipeIds: string[] }[]) {
+  const planId = 'test-plan-1';
+  const storage = {
+    version: 2,
+    plans: [
+      {
+        id: planId,
+        days: days.map((d) => ({
+          date: d.date,
+          slots: d.recipeIds.map((id, i) => ({
+            id: `s-${d.date}-${i}`,
+            name: i === 0 ? 'śniadanie' : i === 1 ? 'obiad' : 'kolacja',
+            recipeId: id,
+            isCustom: false,
+          })),
+        })),
+        createdAt: '2026-08-11T12:00:00.000Z',
+      },
+    ],
+    activeForShopping: planId,
+  };
   await page.evaluate(
-    ({ key, plan }) => localStorage.setItem(key, JSON.stringify(plan)),
-    { key: STORAGE_KEY, plan: { version: 1, days } }
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    { key: PLANS_KEY, data: storage }
   );
 }
 
 async function clearAll(page: Page) {
-  await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
+  await page.evaluate((key) => localStorage.removeItem(key), PLANS_KEY);
 }
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
 
 /** Czeka aż Alpine pokaże zawartość listy zakupów (nie stan pusty). */
 async function waitForShoppingContent(page: Page) {
@@ -31,7 +54,7 @@ async function waitForShoppingContent(page: Page) {
   );
 }
 
-/** Czeka aż Alpine pokaże karty na stronie głównej. */
+/** Czeka aż Alpine wyrenderuje karty na stronie głównej. */
 async function waitForCards(page: Page) {
   await page.waitForFunction(
     () =>
@@ -42,19 +65,36 @@ async function waitForCards(page: Page) {
   );
 }
 
-/** Czeka aż Alpine wyrenderuje karty dni w planerze. */
-async function waitForDays(page: Page, n = 3) {
+/** Czeka aż widok listy planów jest aktywny (przycisk "+ Nowy plan" widoczny). */
+async function waitForPlanList(page: Page) {
   await page.waitForFunction(
-    (expected: number) =>
-      document.querySelectorAll('[x-data] .grid > div.flex').length === expected,
-    n,
-    { timeout: 8_000 }
+    () => {
+      const btn = Array.from(document.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === '+ Nowy plan'
+      );
+      return btn ? window.getComputedStyle(btn).display !== 'none' : false;
+    },
+    { timeout: 10_000 }
+  );
+}
+
+/** Czeka aż edytor planu renderuje min. n dni. */
+async function waitForEditView(page: Page, minDays = 1) {
+  await page.waitForFunction(
+    (n: number) => {
+      const back = Array.from(document.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === '← Plany'
+      );
+      if (!back || window.getComputedStyle(back).display === 'none') return false;
+      return document.querySelectorAll('.space-y-4 > div.rounded-xl').length >= n;
+    },
+    minDays,
+    { timeout: 10_000 }
   );
 }
 
 /** Zwraca liczbę zmiennoprzecinkową z tekstu elementu (np. "732.5" z "732.5 kcal"). */
 async function readMacroValue(page: Page, label: string): Promise<number> {
-  // Makra są w divach p.text-2xl obok etykiety
   const card = page.locator('.rounded-xl').filter({ hasText: label }).first();
   const text = await card.locator('p.text-2xl').textContent();
   return parseFloat((text ?? '0').replace(/[^\d.]/g, ''));
@@ -69,75 +109,63 @@ test.describe('Test 1 — Pełny flow usera', () => {
     await clearAll(page);
     await waitForCards(page);
 
-    // Widoczne karty istnieją
     const cards = page.locator('.grid > div').filter({ visible: true });
     const cardCount = await cards.count();
     expect(cardCount).toBeGreaterThan(0);
 
-    // ── Krok 2: wejście w szczegóły pierwszego przepisu ───────────────────
+    // ── Krok 2: szczegóły pierwszego przepisu ─────────────────────────────
     const firstCard = cards.first().locator('a');
     const recipeTitle = await firstCard.getByRole('heading').textContent();
     await firstCard.click();
 
     await expect(page).toHaveURL(/\/mokoszo\/przepis\/.+\//);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(recipeTitle!.trim());
-
-    // Przepis ma składniki i makra
     expect(await page.locator('aside li').count()).toBeGreaterThan(0);
     await expect(page.locator('text=kcal').first()).toBeVisible();
 
-    // ── Krok 3: przejście do planera przez nawigację ───────────────────────
+    // ── Krok 3: przejście do planera ──────────────────────────────────────
     await page.getByRole('link', { name: 'Plan' }).click();
     await expect(page).toHaveURL('/mokoszo/plan/');
-    await waitForDays(page, 3);
+    await waitForPlanList(page);
 
-    // Planer pokazuje 3 dni
-    const dayCounts = await page.locator('[x-data] .grid > div.flex').count();
-    expect(dayCounts).toBe(3);
+    // ── Krok 4: utwórz nowy plan (3 dni) ─────────────────────────────────
+    await page.getByRole('button', { name: '+ Nowy plan' }).click();
+    await page.waitForSelector('#plan-start', { state: 'visible' });
+    await page.fill('#plan-start', '2026-08-12');
+    await page.fill('#plan-end', '2026-08-14');
+    await page.getByRole('button', { name: 'Utwórz plan' }).click();
+    await waitForEditView(page, 3);
 
-    // ── Krok 4: wybór przepisu na dzień 1 ────────────────────────────────
-    const firstDay = page.locator('[x-data] .grid > div.flex').first();
-    const firstRecipeBtn = firstDay.getByRole('button').first();
-    const chosenRecipe = (await firstRecipeBtn.textContent())!.trim();
-
-    await firstRecipeBtn.click();
+    // ── Krok 5: wybierz przepis dla śniadania w dniu 1 ───────────────────
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await firstDay.getByText('+ wybierz przepis').first().click();
+    const pickerBtns = firstDay.locator('.flex.flex-wrap.gap-1\\.5').first().getByRole('button');
+    const chosenRecipe = (await pickerBtns.first().textContent())!.trim();
+    await pickerBtns.first().click();
     await page.waitForTimeout(300);
 
-    // Wybrany przepis widoczny w liście dnia
-    await expect(firstDay.locator('text=✓')).toBeVisible();
+    // Wybrany przepis widoczny w slocie
     await expect(firstDay).toContainText(chosenRecipe);
 
-    // ── Krok 5: przejście do listy zakupów przez CTA ──────────────────────
-    const cta = page.locator('main a[href*="lista-zakupow"]');
-    await expect(cta).toBeVisible();
-    await cta.click();
-
+    // ── Krok 6: przejście do listy zakupów ────────────────────────────────
+    await page.getByRole('button', { name: '🛒 Lista zakupów' }).click();
     await expect(page).toHaveURL('/mokoszo/lista-zakupow/');
     await waitForShoppingContent(page);
 
-    // ── Krok 6: lista zakupów jest uzupełniona ────────────────────────────
-    // Co najmniej 1 kategoria
-    const catButtons = page.locator('section button').filter({ hasText: /\S+/ });
-    expect(await catButtons.count()).toBeGreaterThan(0);
-
-    // Co najmniej 1 składnik
-    const items = page.locator('ul li');
-    expect(await items.count()).toBeGreaterThan(0);
-
-    // Makra > 0
-    const kcalCard = page.locator('.rounded-xl').filter({ hasText: 'kcal' }).first();
-    const kcalText = await kcalCard.locator('p.text-2xl').textContent();
+    // Lista ma składniki i makra > 0
+    expect(await page.locator('ul li').count()).toBeGreaterThan(0);
+    const kcalText = await page
+      .locator('.rounded-xl').filter({ hasText: 'kcal' }).first()
+      .locator('p.text-2xl').textContent();
     expect(parseFloat(kcalText ?? '0')).toBeGreaterThan(0);
 
-    // ── Krok 7: powrót do planu przez "Wróć do planu" ────────────────────
-    await page.getByRole('link', { name: /wróć do planu/i }).click();
+    // ── Krok 7: powrót do planów ──────────────────────────────────────────
+    await page.getByRole('link', { name: /wróć do planów/i }).click();
     await expect(page).toHaveURL('/mokoszo/plan/');
-    await waitForDays(page, 3);
+    await waitForPlanList(page);
 
-    // Plan wciąż pamięta wybrany przepis (persist)
-    const restoredDay = page.locator('[x-data] .grid > div.flex').first();
-    await expect(restoredDay.locator('text=✓')).toBeVisible();
-    await expect(restoredDay).toContainText(chosenRecipe);
+    // Plan widoczny na liście z datą
+    await expect(page.locator('.grid > div').filter({ hasText: 'sie' }).first()).toBeVisible();
   });
 });
 
@@ -146,20 +174,18 @@ test.describe('Test 1 — Pełny flow usera', () => {
 test.describe('Test 2 — Poprawność ilości składników', () => {
   /**
    * Spaghetti Bolognese — znane ilości:
-   *   makaron-spaghetti  200 g
-   *   mieso-mielone-wolowe  300 g
-   *   cebula  1 szt
-   *   czosnek  2 szt
-   *   pomidory-z-puszki  400 g
-   *   oliwa-z-oliwek  30 ml
-   *   sol  1 szczypta
-   *   pieprz  1 szczypta
+   *   makaron-spaghetti           200 g
+   *   mieso-mielone-wolowe        300 g
+   *   cebula                        1 szt
+   *   czosnek                       2 szt
+   *   pomidory-z-puszki           400 g
+   *   oliwa-z-oliwek               30 ml
+   *   sol                           1 szczypta
+   *   pieprz                        1 szczypta
    */
   test('1 dzień spaghetti → dokładne ilości składników', async ({ page }) => {
     await page.goto('/mokoszo/lista-zakupow/');
-    await setPlan(page, [
-      { date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] },
-    ]);
+    await setPlanV2(page, [{ date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] }]);
     await page.reload();
     await waitForShoppingContent(page);
 
@@ -168,17 +194,17 @@ test.describe('Test 2 — Poprawność ilości składników', () => {
       await expect(row, `${name}: oczekiwano ${qty}`).toContainText(qty);
     };
 
-    await assertItem('Makaron spaghetti',          '200 g');
-    await assertItem('Mięso mielone wołowe',        '300 g');
-    await assertItem('Cebula',                      '1 szt');
-    await assertItem('Czosnek (ząbek)',             '2 szt');
-    await assertItem('Pomidory z puszki (krojone)', '400 g');
-    await assertItem('Oliwa z oliwek',              '30 ml');
+    await assertItem('Makaron spaghetti',           '200 g');
+    await assertItem('Mięso mielone wołowe',         '300 g');
+    await assertItem('Cebula',                       '1 szt');
+    await assertItem('Czosnek (ząbek)',              '2 szt');
+    await assertItem('Pomidory z puszki (krojone)',  '400 g');
+    await assertItem('Oliwa z oliwek',               '30 ml');
   });
 
-  test('2 dni spaghetti → ilości podwojone', async ({ page }) => {
+  test('2 dni spaghetti (2 sloty w tym samym planie) → ilości podwojone', async ({ page }) => {
     await page.goto('/mokoszo/lista-zakupow/');
-    await setPlan(page, [
+    await setPlanV2(page, [
       { date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] },
       { date: '2026-08-12', recipeIds: ['spaghetti-bolognese'] },
     ]);
@@ -201,7 +227,7 @@ test.describe('Test 2 — Poprawność ilości składników', () => {
   test('2 dni spaghetti → makra ≈ 2× makra 1 dnia', async ({ page }) => {
     // Zmierz 1 dzień
     await page.goto('/mokoszo/lista-zakupow/');
-    await setPlan(page, [{ date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] }]);
+    await setPlanV2(page, [{ date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] }]);
     await page.reload();
     await waitForShoppingContent(page);
 
@@ -209,11 +235,10 @@ test.describe('Test 2 — Poprawność ilości składników', () => {
     const prot1 = await readMacroValue(page, 'białko');
     const fat1  = await readMacroValue(page, 'tłuszcze');
     const carb1 = await readMacroValue(page, 'węglowodany');
-
     expect(cal1).toBeGreaterThan(0);
 
     // Zmierz 2 dni
-    await setPlan(page, [
+    await setPlanV2(page, [
       { date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] },
       { date: '2026-08-12', recipeIds: ['spaghetti-bolognese'] },
     ]);
@@ -225,41 +250,32 @@ test.describe('Test 2 — Poprawność ilości składników', () => {
     const fat2  = await readMacroValue(page, 'tłuszcze');
     const carb2 = await readMacroValue(page, 'węglowodany');
 
-    // Tolerancja 0.2 kcal/g (zaokrąglenia)
     expect(cal2).toBeCloseTo(cal1 * 2, 0);
     expect(prot2).toBeCloseTo(prot1 * 2, 0);
     expect(fat2).toBeCloseTo(fat1 * 2, 0);
     expect(carb2).toBeCloseTo(carb1 * 2, 0);
   });
 
-  test('spaghetti + owsianka (ten sam dzień) → składniki z obu bez duplikatów', async ({ page }) => {
-    /**
-     * Spaghetti i owsianka nie dzielą żadnego składnika.
-     * Suma powinna zawierać wszystkie składniki obu przepisów bez powtórzeń.
-     * spaghetti: 8 składników, owsianka: 5 składników → razem 13 unikalnych wpisów.
-     */
+  test('spaghetti + owsianka (ten sam dzień, 2 sloty) → składniki z obu bez duplikatów', async ({ page }) => {
     await page.goto('/mokoszo/lista-zakupow/');
-    await setPlan(page, [
+    await setPlanV2(page, [
       { date: '2026-08-11', recipeIds: ['spaghetti-bolognese', 'owsianka-z-bananem'] },
     ]);
     await page.reload();
     await waitForShoppingContent(page);
 
-    // Zweryfikuj składniki z obu przepisów
     const assertItem = async (name: string, qty: string) => {
       const row = page.locator('ul li').filter({ hasText: name });
       await expect(row, `${name}: oczekiwano ${qty}`).toContainText(qty);
     };
 
-    // Ze spaghetti
     await assertItem('Makaron spaghetti',  '200 g');
     await assertItem('Mięso mielone wołowe', '300 g');
-    // Z owsianki
     await assertItem('Płatki owsiane', '80 g');
     await assertItem('Mleko',          '200 ml');
     await assertItem('Banan',          '1 szt');
 
-    // Brak duplikatów — każda nazwa na liście pojawia się dokładnie raz
+    // Brak duplikatów
     const allNames = await page
       .locator('ul li label span:first-child')
       .allTextContents();
@@ -269,35 +285,22 @@ test.describe('Test 2 — Poprawność ilości składników', () => {
   });
 
   test('ten sam składnik w 2 przepisach różnych dni → jedna zsumowana pozycja', async ({ page }) => {
-    /**
-     * zupa-pomidorowa i zupa-jarzynowa obie używają cebuli (po 1 szt każda).
-     * Plan: dzień 1 zupa-pomidorowa, dzień 2 zupa-jarzynowa.
-     * Oczekiwana lista: "Cebula 2 szt" (nie dwa wpisy "Cebula 1 szt").
-     */
     await page.goto('/mokoszo/lista-zakupow/');
-    await setPlan(page, [
+    await setPlanV2(page, [
       { date: '2026-08-11', recipeIds: ['zupa-pomidorowa'] },
       { date: '2026-08-12', recipeIds: ['zupa-jarzynowa'] },
     ]);
     await page.reload();
     await waitForShoppingContent(page);
 
-    // "Cebula" pojawia się na liście dokładnie raz
     const cebula = page.locator('ul li').filter({ hasText: 'Cebula' });
     await expect(cebula).toHaveCount(1);
-
-    // I ma zsumowaną ilość (obie zupy mają po 1 szt cebuli → 2 szt)
     await expect(cebula).toContainText('2 szt');
   });
 
   test('kolejność kategorii zgodna z CATEGORY_ORDER', async ({ page }) => {
-    /**
-     * CATEGORY_ORDER: warzywa, owoce, mięso, nabiał, zboża, konserwy, oleje, przyprawy
-     * Plan z spaghetti + owsianka pokrywa: warzywa, mięso, nabiał, zboża, konserwy, oleje, przyprawy.
-     * Weryfikujemy że kategorie pojawiają się w tej kolejności (bez owoców, bo nie ma).
-     */
     await page.goto('/mokoszo/lista-zakupow/');
-    await setPlan(page, [
+    await setPlanV2(page, [
       { date: '2026-08-11', recipeIds: ['spaghetti-bolognese', 'owsianka-z-bananem'] },
     ]);
     await page.reload();
@@ -308,8 +311,6 @@ test.describe('Test 2 — Poprawność ilości składników', () => {
       .allTextContents();
 
     const ORDER = ['Warzywa', 'Owoce', 'Mięso', 'Nabiał', 'Zboża', 'Konserwy', 'Oleje', 'Przyprawy'];
-
-    // Filtruj ORDER do kategorii które faktycznie się pojawiają na liście
     const expected = ORDER.filter((label) =>
       catHeaders.some((h) => h.includes(label))
     );

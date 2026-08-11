@@ -1,183 +1,517 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import MealPlanner from '../components/MealPlanner.astro';
 
 const allRecipes = await getCollection('recipes');
 allRecipes.sort((a, b) => a.data.title.localeCompare(b.data.title, 'pl'));
 
-const recipes = allRecipes.map((r) => ({
+const recipesArr = allRecipes.map((r) => ({
   id: r.id.replace(/\.md$/, ''),
   title: r.data.title,
-  prepTimeMinutes: r.data.prepTimeMinutes,
+  tags: r.data.tags,
 }));
 
 const base = import.meta.env.BASE_URL;
 ---
 
 <Base title="Plan jadłospisu">
-  <h1 class="mb-6 text-3xl font-bold text-gray-900">Plan jadłospisu</h1>
+  <div x-data="plannerApp()" x-cloak>
 
-  <div x-data="mealPlanner()">
-    <!-- Kontrolka liczby dni -->
-    <div class="mb-6 flex flex-wrap items-center gap-4">
-      <span class="text-sm font-medium text-gray-700">Liczba dni:</span>
+    <!-- ══ WIDOK: LISTA PLANÓW ══════════════════════════════════════════════ -->
+    <div x-show="view === 'list'">
 
-      <div class="flex items-center gap-2">
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-3xl font-bold text-gray-900">Moje plany</h1>
         <button
           type="button"
-          x-on:click="setNumDays(numDays - 1)"
-          x-bind:disabled="numDays <= 1"
-          x-bind:class="numDays <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
-          class="min-h-[44px] min-w-[44px] rounded-lg border border-gray-300 text-xl font-medium"
-          aria-label="Zmniejsz liczbę dni"
+          @click="goCreate()"
+          class="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition"
         >
-          −
-        </button>
-        <span
-          x-text="numDays"
-          class="min-w-[2.5rem] text-center text-xl font-bold text-gray-900"
-        ></span>
-        <button
-          type="button"
-          x-on:click="setNumDays(numDays + 1)"
-          x-bind:disabled="numDays >= 14"
-          x-bind:class="numDays >= 14 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
-          class="min-h-[44px] min-w-[44px] rounded-lg border border-gray-300 text-xl font-medium"
-          aria-label="Zwiększ liczbę dni"
-        >
-          +
+          + Nowy plan
         </button>
       </div>
 
-      <button
-        type="button"
-        x-show="hasAnyRecipes"
-        x-on:click="clearPlan()"
-        class="min-h-[44px] rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
-        style="display:none"
-      >
-        Wyczyść plan
-      </button>
+      <!-- Stan pusty -->
+      <div x-show="plans.length === 0" class="flex flex-col items-center py-20 text-center">
+        <p class="mb-3 text-5xl">📅</p>
+        <p class="mb-1 text-xl font-semibold text-gray-800">Brak planów</p>
+        <p class="mb-6 text-sm text-gray-500">Utwórz swój pierwszy plan jadłospisu.</p>
+        <button
+          type="button"
+          @click="goCreate()"
+          class="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition"
+        >
+          Utwórz plan
+        </button>
+      </div>
+
+      <!-- Karty planów -->
+      <div x-show="plans.length > 0" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <template x-for="plan in plans" :key="plan.id">
+          <div class="flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p class="mb-0.5 text-lg font-semibold text-gray-900" x-text="planLabel(plan)"></p>
+            <p class="mb-4 text-sm text-gray-500" x-text="planStats(plan)"></p>
+            <div class="mt-auto flex flex-wrap gap-2">
+              <button
+                type="button"
+                @click="goEdit(plan.id)"
+                class="min-h-[44px] rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Edytuj
+              </button>
+              <button
+                type="button"
+                @click="goShopping(plan.id)"
+                x-bind:disabled="!planHasRecipes(plan)"
+                x-bind:class="planHasRecipes(plan)
+                  ? 'border-green-300 text-green-700 hover:bg-green-50'
+                  : 'border-gray-200 text-gray-400 cursor-not-allowed'"
+                class="min-h-[44px] rounded-lg border px-4 text-sm font-medium transition"
+              >
+                🛒 Lista zakupów
+              </button>
+              <button
+                type="button"
+                @click="deletePlan(plan.id)"
+                class="min-h-[44px] rounded-lg border border-red-200 px-4 text-sm font-medium text-red-600 hover:bg-red-50 transition"
+              >
+                Usuń
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
 
-    <!-- Planer dni -->
-    <MealPlanner recipes={recipes} />
+    <!-- ══ WIDOK: NOWY PLAN ═════════════════════════════════════════════════ -->
+    <div x-show="view === 'create'" style="display:none">
 
-    <!-- CTA do listy zakupów -->
-    <div class="mt-8" x-show="hasAnyRecipes" style="display:none">
-      <a
-        href={`${base}lista-zakupow/`}
-        class="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
-      >
-        🛒 Przejdź do listy zakupów →
-      </a>
+      <div class="mb-6 flex items-center gap-4">
+        <button
+          type="button"
+          @click="goList()"
+          class="inline-flex min-h-[44px] items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition"
+        >
+          ← Wróć
+        </button>
+        <h1 class="text-3xl font-bold text-gray-900">Nowy plan</h1>
+      </div>
+
+      <div class="max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mb-4">
+          <label class="mb-1 block text-sm font-medium text-gray-700" for="plan-start">Od</label>
+          <input
+            id="plan-start"
+            type="date"
+            x-model="newStart"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none"
+          />
+        </div>
+        <div class="mb-4">
+          <label class="mb-1 block text-sm font-medium text-gray-700" for="plan-end">Do</label>
+          <input
+            id="plan-end"
+            type="date"
+            x-model="newEnd"
+            x-bind:min="newStart"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none"
+          />
+        </div>
+        <div
+          x-show="newStart && newEnd && newEnd < newStart"
+          class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+        >
+          Data końcowa musi być po dacie początkowej.
+        </div>
+        <p x-show="dateRangeValid" class="mb-4 text-xs text-gray-500">
+          Plan obejmie <strong x-text="createDayCount"></strong> dni.
+        </p>
+        <button
+          type="button"
+          @click="createPlan()"
+          x-bind:disabled="!dateRangeValid"
+          x-bind:class="dateRangeValid
+            ? 'bg-green-600 hover:bg-green-700'
+            : 'bg-gray-300 cursor-not-allowed'"
+          class="w-full min-h-[44px] rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition"
+        >
+          Utwórz plan
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ WIDOK: EDYTOR PLANU ══════════════════════════════════════════════ -->
+    <div x-show="view === 'edit'" style="display:none">
+
+      <!-- Nagłówek edytora -->
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          @click="goList()"
+          class="inline-flex min-h-[44px] items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-900 transition"
+        >
+          ← Plany
+        </button>
+        <h1
+          class="text-xl font-bold text-gray-900"
+          x-text="editingPlan ? planLabel(editingPlan) : ''"
+        ></h1>
+        <button
+          type="button"
+          @click="goShopping(editingId)"
+          x-bind:disabled="!editingPlan || !planHasRecipes(editingPlan)"
+          x-bind:class="(editingPlan && planHasRecipes(editingPlan))
+            ? 'bg-green-600 text-white hover:bg-green-700'
+            : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+          class="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition"
+        >
+          🛒 Lista zakupów
+        </button>
+      </div>
+
+      <!-- Dni -->
+      <div class="space-y-4">
+        <template x-for="(day, dayIdx) in (editingPlan ? editingPlan.days : [])" :key="day.date">
+          <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+
+            <!-- Nagłówek dnia -->
+            <h2
+              class="mb-3 text-base font-semibold text-gray-900"
+              x-text="formatDate(day.date)"
+            ></h2>
+
+            <!-- Sloty posiłków -->
+            <div class="space-y-2">
+              <template x-for="(slot, slotIdx) in day.slots" :key="slot.id">
+                <div class="flex min-h-[44px] items-start gap-2 rounded-lg bg-gray-50 px-3 py-2">
+
+                  <!-- Nazwa posiłku -->
+                  <div class="w-24 flex-shrink-0 pt-2">
+                    <span
+                      class="text-sm font-medium text-gray-500 capitalize"
+                      x-show="!slot.isCustom"
+                      x-text="slot.name"
+                    ></span>
+                    <input
+                      x-show="slot.isCustom"
+                      x-model="slot.name"
+                      @blur="_save()"
+                      placeholder="Nazwa…"
+                      class="w-full bg-transparent text-sm font-medium text-gray-500 placeholder-gray-300 focus:outline-none border-b border-dashed border-gray-300"
+                    />
+                  </div>
+
+                  <!-- Zawartość: wybrany przepis + zmień / wybierz + picker -->
+                  <div class="flex min-w-0 flex-1 flex-col">
+
+                    <!-- Wybrany przepis -->
+                    <div x-show="slot.recipeId" class="flex flex-wrap items-center gap-2 pt-2">
+                      <span
+                        class="text-sm font-medium text-gray-900"
+                        x-text="recipeTitle(slot.recipeId)"
+                      ></span>
+                      <button
+                        type="button"
+                        @click="clearRecipe(dayIdx, slotIdx)"
+                        class="inline-flex min-h-[28px] min-w-[28px] items-center justify-center text-gray-400 hover:text-red-500 text-lg leading-none transition"
+                        aria-label="Usuń przepis"
+                      >✕</button>
+                      <button
+                        type="button"
+                        @click="togglePicker(dayIdx, slotIdx)"
+                        class="inline-flex min-h-[28px] items-center text-xs font-medium text-gray-400 hover:text-green-700 underline transition"
+                      >zmień</button>
+                    </div>
+
+                    <!-- Brak przepisu: przycisk wybierz -->
+                    <div x-show="!slot.recipeId" class="pt-2">
+                      <button
+                        type="button"
+                        @click="togglePicker(dayIdx, slotIdx)"
+                        class="inline-flex min-h-[36px] items-center text-sm text-gray-400 hover:text-green-700 transition"
+                      >
+                        <span x-show="!isPickerOpen(dayIdx, slotIdx)">+ wybierz przepis</span>
+                        <span x-show="isPickerOpen(dayIdx, slotIdx)">▲ schowaj listę</span>
+                      </button>
+                    </div>
+
+                    <!-- Picker: lista przepisów -->
+                    <div x-show="isPickerOpen(dayIdx, slotIdx)" class="mt-2 flex flex-wrap gap-1.5">
+                      <template x-for="r in allRecipes" :key="r.id">
+                        <button
+                          type="button"
+                          @click="setRecipe(dayIdx, slotIdx, r.id)"
+                          x-bind:class="slot.recipeId === r.id
+                            ? 'bg-green-600 text-white border-green-600'
+                            : 'border-gray-300 text-gray-700 hover:border-green-400 hover:text-green-700'"
+                          class="min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition"
+                          x-text="r.title"
+                        ></button>
+                      </template>
+                    </div>
+
+                  </div>
+
+                  <!-- Usuń własny slot -->
+                  <button
+                    x-show="slot.isCustom"
+                    type="button"
+                    @click="removeSlot(dayIdx, slotIdx)"
+                    class="flex-shrink-0 inline-flex min-h-[36px] items-start pt-2 text-xs font-medium text-red-400 hover:text-red-600 transition"
+                    aria-label="Usuń posiłek"
+                  >
+                    Usuń
+                  </button>
+
+                </div>
+              </template>
+            </div>
+
+            <!-- Dodaj posiłek -->
+            <button
+              type="button"
+              @click="addSlot(dayIdx)"
+              class="mt-3 min-h-[44px] w-full rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 hover:border-green-400 hover:text-green-700 transition"
+            >
+              + Dodaj posiłek
+            </button>
+          </div>
+        </template>
+      </div>
+
     </div>
   </div>
 </Base>
 
-<script define:vars={{ recipes }}>
-  const STORAGE_KEY = 'mokoszo:meal-plan:v1';
+<script define:vars={{ recipesArr, base }}>
+  const PLANS_KEY = 'mokoszo:plans:v2';
 
-  window.mealPlanner = function mealPlanner() {
-    // Lokalna kopia przepisów do wyszukiwania tytułu po id
-    const recipeMap = Object.fromEntries(recipes.map((r) => [r.id, r]));
-
-    function load() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        if (parsed.version !== 1 || !Array.isArray(parsed.days)) return null;
-        return parsed;
-      } catch {
-        return null;
+  // ── Storage helpers ────────────────────────────────────────────────────────
+  function loadStorage() {
+    try {
+      const raw = localStorage.getItem(PLANS_KEY);
+      if (!raw) return { version: 2, plans: [], activeForShopping: null };
+      const p = JSON.parse(raw);
+      if (p.version !== 2 || !Array.isArray(p.plans)) {
+        return { version: 2, plans: [], activeForShopping: null };
       }
+      return p;
+    } catch {
+      return { version: 2, plans: [], activeForShopping: null };
     }
+  }
 
-    function persist(days) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, days }));
-      } catch {
-        // tryb prywatny lub brak miejsca — ignorujemy
-      }
+  function persistStorage(plans, activeForShopping) {
+    try {
+      localStorage.setItem(
+        PLANS_KEY,
+        JSON.stringify({ version: 2, plans, activeForShopping })
+      );
+    } catch {}
+  }
+
+  // ── Pure helpers ───────────────────────────────────────────────────────────
+  function uid() {
+    return Math.random().toString(36).slice(2, 9);
+  }
+
+  function todayISO() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function addDaysToISO(iso, n) {
+    const d = new Date(iso + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return d.toISOString().split('T')[0];
+  }
+
+  function daysInRange(start, end) {
+    const result = [];
+    const cur = new Date(start + 'T12:00:00');
+    const endDate = new Date(end + 'T12:00:00');
+    while (cur <= endDate && result.length < 31) {
+      result.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
     }
+    return result;
+  }
 
+  function makeSlots() {
+    return [
+      { id: uid(), name: 'śniadanie', recipeId: null, isCustom: false },
+      { id: uid(), name: 'obiad',     recipeId: null, isCustom: false },
+      { id: uid(), name: 'kolacja',   recipeId: null, isCustom: false },
+    ];
+  }
+
+  function fmtShort(iso) {
+    return new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'short' })
+      .format(new Date(iso + 'T12:00:00'));
+  }
+
+  // ── Alpine component ───────────────────────────────────────────────────────
+  window.plannerApp = function plannerApp() {
     return {
-      numDays: 3,
-      days: /** @type {{ date: string; recipeIds: string[] }[]} */ ([]),
+      view: 'list',            // 'list' | 'create' | 'edit'
+      plans: [],
+      activeForShopping: null,
+      editingId: null,
+      newStart: todayISO(),
+      newEnd: addDaysToISO(todayISO(), 6),
+      openPicker: {},          // { [`${dayIdx}-${slotIdx}`]: boolean }
+
+      // ── Computed ────────────────────────────────────────────────────────
+      get allRecipes() { return recipesArr; },
+
+      get editingPlan() {
+        return this.plans.find((p) => p.id === this.editingId) ?? null;
+      },
+
+      get dateRangeValid() {
+        return !!(this.newStart && this.newEnd && this.newEnd >= this.newStart);
+      },
+
+      get createDayCount() {
+        if (!this.dateRangeValid) return 0;
+        return daysInRange(this.newStart, this.newEnd).length;
+      },
+
+      // ── Helpers ─────────────────────────────────────────────────────────
+      planLabel(plan) {
+        const days = plan.days;
+        if (!days.length) return 'Pusty plan';
+        if (days.length === 1) return fmtShort(days[0].date);
+        return `${fmtShort(days[0].date)} – ${fmtShort(days[days.length - 1].date)}`;
+      },
+
+      planStats(plan) {
+        const n = plan.days.length;
+        const total = plan.days.reduce((s, d) => s + (d.slots?.length ?? 0), 0);
+        const filled = plan.days.reduce(
+          (s, d) => s + (d.slots ?? []).filter((sl) => sl.recipeId).length,
+          0
+        );
+        const dayLabel = n === 1 ? '1 dzień' : `${n} dni`;
+        return `${dayLabel} · ${filled}/${total} posiłków`;
+      },
+
+      planHasRecipes(plan) {
+        return plan.days.some((d) => (d.slots ?? []).some((s) => s.recipeId));
+      },
+
+      recipeTitle(id) {
+        return recipesArr.find((r) => r.id === id)?.title ?? id;
+      },
+
+      formatDate(iso) {
+        const s = new Intl.DateTimeFormat('pl-PL', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        }).format(new Date(iso + 'T12:00:00'));
+        return s.charAt(0).toUpperCase() + s.slice(1);
+      },
+
+      // ── Navigation ──────────────────────────────────────────────────────
+      goCreate() {
+        this.view = 'create';
+      },
+
+      goList() {
+        this.view = 'list';
+        this.editingId = null;
+        this.openPicker = {};
+      },
+
+      goEdit(id) {
+        this.editingId = id;
+        this.view = 'edit';
+        this.openPicker = {};
+      },
+
+      // ── Plan CRUD ───────────────────────────────────────────────────────
+      createPlan() {
+        if (!this.dateRangeValid) return;
+        const days = daysInRange(this.newStart, this.newEnd);
+        const id = uid();
+        this.plans.push({
+          id,
+          days: days.map((date) => ({ date, slots: makeSlots() })),
+          createdAt: new Date().toISOString(),
+        });
+        this._save();
+        this.goEdit(id);
+      },
+
+      deletePlan(id) {
+        if (!confirm('Usunąć ten plan?')) return;
+        this.plans = this.plans.filter((p) => p.id !== id);
+        if (this.activeForShopping === id) this.activeForShopping = null;
+        this._save();
+      },
+
+      // ── Slot editing ────────────────────────────────────────────────────
+      setRecipe(dayIdx, slotIdx, recipeId) {
+        const plan = this.plans.find((p) => p.id === this.editingId);
+        if (!plan) return;
+        plan.days[dayIdx].slots[slotIdx].recipeId = recipeId;
+        // Reset picker with new object to trigger reactivity
+        this.openPicker = { ...this.openPicker, [`${dayIdx}-${slotIdx}`]: false };
+        this._save();
+      },
+
+      clearRecipe(dayIdx, slotIdx) {
+        const plan = this.plans.find((p) => p.id === this.editingId);
+        if (!plan) return;
+        plan.days[dayIdx].slots[slotIdx].recipeId = null;
+        this._save();
+      },
+
+      addSlot(dayIdx) {
+        const plan = this.plans.find((p) => p.id === this.editingId);
+        if (!plan) return;
+        plan.days[dayIdx].slots.push({
+          id: uid(),
+          name: 'Własny posiłek',
+          recipeId: null,
+          isCustom: true,
+        });
+        this._save();
+      },
+
+      removeSlot(dayIdx, slotIdx) {
+        const plan = this.plans.find((p) => p.id === this.editingId);
+        if (!plan) return;
+        plan.days[dayIdx].slots.splice(slotIdx, 1);
+        this._save();
+      },
+
+      togglePicker(dayIdx, slotIdx) {
+        const key = `${dayIdx}-${slotIdx}`;
+        this.openPicker = { ...this.openPicker, [key]: !this.openPicker[key] };
+      },
+
+      isPickerOpen(dayIdx, slotIdx) {
+        return !!this.openPicker[`${dayIdx}-${slotIdx}`];
+      },
+
+      // ── Shopping list ───────────────────────────────────────────────────
+      goShopping(planId) {
+        this.activeForShopping = planId;
+        this._save();
+        window.location.href = base + 'lista-zakupow/';
+      },
+
+      // ── Storage ─────────────────────────────────────────────────────────
+      _save() {
+        persistStorage(this.plans, this.activeForShopping);
+      },
 
       init() {
-        const saved = load();
-        if (saved?.days?.length > 0) {
-          this.numDays = saved.days.length;
-          this.days = saved.days;
-        } else {
-          this._buildDays(3);
-        }
-      },
-
-      /** Buduje tablicę dni startując od dzisiaj; zachowuje recipeIds dla istniejących indeksów. */
-      _buildDays(n) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const prev = this.days;
-        this.days = Array.from({ length: n }, (_, i) => {
-          const d = new Date(today);
-          d.setDate(today.getDate() + i);
-          return {
-            date: d.toISOString().split('T')[0],
-            recipeIds: prev[i]?.recipeIds ?? [],
-          };
-        });
-      },
-
-      setNumDays(n) {
-        const clamped = Math.max(1, Math.min(14, n));
-        this._buildDays(clamped);
-        this.numDays = clamped;
-        persist(this.days);
-      },
-
-      toggleRecipe(dayIndex, recipeId) {
-        const day = this.days[dayIndex];
-        if (!day) return;
-        const i = day.recipeIds.indexOf(recipeId);
-        if (i === -1) day.recipeIds.push(recipeId);
-        else day.recipeIds.splice(i, 1);
-        persist(this.days);
-      },
-
-      hasRecipe(dayIndex, recipeId) {
-        return this.days[dayIndex]?.recipeIds.includes(recipeId) ?? false;
-      },
-
-      recipeTitle(recipeId) {
-        return recipeMap[recipeId]?.title ?? recipeId;
-      },
-
-      get hasAnyRecipes() {
-        return this.days.some((d) => d.recipeIds.length > 0);
-      },
-
-      formatDate(dateStr) {
-        const date = new Date(dateStr + 'T12:00:00');
-        return new Intl.DateTimeFormat('pl-PL', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-        }).format(date);
-      },
-
-      clearPlan() {
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-        } catch {
-          // ignore
-        }
-        this.days = []; // reset przed _buildDays — inaczej recipeIds zostałyby skopiowane
-        this._buildDays(this.numDays);
+        const stored = loadStorage();
+        this.plans = stored.plans;
+        this.activeForShopping = stored.activeForShopping ?? null;
       },
     };
-  }
+  };
 </script>
