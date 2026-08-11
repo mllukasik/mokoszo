@@ -201,6 +201,6 @@ Każdy task ma kryteria akceptacji (AC) — task uznajemy za zrobiony, gdy wszys
 
 ### T8.1 Weryfikacja produkcyjna
 **AC:**
-- [ ] Pełny flow (przeglądanie → planowanie → lista zakupów) przetestowany na żywym URL GitHub Pages, nie tylko lokalnie
-- [ ] Dane w `localStorage` przeżywają przeładowanie strony na produkcji
-- [ ] Brak błędów w konsoli przeglądarki na żadnej z 4 głównych stron
+- [x] Pełny flow (przeglądanie → planowanie → lista zakupów) przetestowany na żywym URL GitHub Pages, nie tylko lokalnie
+- [x] Dane w `localStorage` przeżywają przeładowanie strony na produkcji
+- [x] Brak błędów w konsoli przeglądarki na żadnej z 4 głównych stron
