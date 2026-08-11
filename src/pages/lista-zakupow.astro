@@ -145,6 +145,12 @@ const categoryLabels: Record<string, string> = {
     /**
      * Agreguje składniki z podanych recipeIds.
      * Wynik: { [category]: [{ingredientId, displayName, quantity, unit}] }
+     *
+     * Uwaga: używamy parseFloat zamiast Decimal, bo `is:inline` nie ma dostępu
+     * do importów ES — Decimal.js nie jest tu dostępny. Akceptowalne, ponieważ:
+     * - wszystkie aktualne składniki mają decimalPlaces: 0 (całkowite ilości)
+     * - wynik jest zaokrąglany przez Math.round dla dp === 0
+     * Przy dodaniu składników z dp > 0 należy udostępnić Decimal globalnie.
      */
     function buildList(recipeIds) {
       // Zsumuj ilości per składnik
