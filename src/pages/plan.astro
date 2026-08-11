@@ -79,7 +79,7 @@ const base = import.meta.env.BASE_URL;
 <script define:vars={{ recipes }}>
   const STORAGE_KEY = 'mokoszo:meal-plan:v1';
 
-  function mealPlanner() {
+  window.mealPlanner = function mealPlanner() {
     // Lokalna kopia przepisów do wyszukiwania tytułu po id
     const recipeMap = Object.fromEntries(recipes.map((r) => [r.id, r]));
 
@@ -175,6 +175,7 @@ const base = import.meta.env.BASE_URL;
         } catch {
           // ignore
         }
+        this.days = []; // reset przed _buildDays — inaczej recipeIds zostałyby skopiowane
         this._buildDays(this.numDays);
       },
     };
