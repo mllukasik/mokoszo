@@ -136,13 +136,21 @@ test.describe('Test 1 — Pełny flow usera', () => {
     await page.getByRole('button', { name: 'Utwórz plan' }).click();
     await waitForEditView(page, 3);
 
-    // ── Krok 5: wybierz przepis dla śniadania w dniu 1 ───────────────────
+    // ── Krok 5: wybierz przepis dla śniadania w dniu 1 (nowy picker) ────
     const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
     await firstDay.getByText('+ wybierz przepis').first().click();
-    const pickerBtns = firstDay.locator('.flex.flex-wrap.gap-1\\.5').first().getByRole('button');
-    const chosenRecipe = (await pickerBtns.first().textContent())!.trim();
-    await pickerBtns.first().click();
-    await page.waitForTimeout(300);
+
+    // Poczekaj na widok pickera przepisów
+    await page.getByRole('button', { name: '← Wróć do planu' }).waitFor({ state: 'visible', timeout: 8_000 });
+
+    // Kliknij "Wszystkie" żeby mieć pełną listę, potem wybierz pierwszy przepis
+    await page.getByRole('button', { name: 'Wszystkie' }).click();
+    const firstRecipeCard = page.locator('.grid > button').first();
+    await firstRecipeCard.waitFor({ state: 'visible', timeout: 5_000 });
+    const chosenRecipe = (await firstRecipeCard.locator('h3').textContent())!.trim();
+    await firstRecipeCard.click();
+
+    await waitForEditView(page, 3);
 
     // Wybrany przepis widoczny w slocie
     await expect(firstDay).toContainText(chosenRecipe);

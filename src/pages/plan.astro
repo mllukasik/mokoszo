@@ -9,6 +9,7 @@ const recipesArr = allRecipes.map((r) => ({
   id: r.id.replace(/\.md$/, ''),
   title: r.data.title,
   tags: r.data.tags,
+  prepTimeMinutes: r.data.prepTimeMinutes,
 }));
 
 const base = import.meta.env.BASE_URL;
@@ -183,10 +184,10 @@ const base = import.meta.env.BASE_URL;
             <!-- Sloty posiłków -->
             <div class="space-y-2">
               <template x-for="(slot, slotIdx) in day.slots" :key="slot.id">
-                <div class="flex min-h-[44px] items-start gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                <div class="flex min-h-[56px] items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
 
                   <!-- Nazwa posiłku -->
-                  <div class="w-24 flex-shrink-0 pt-2">
+                  <div class="w-24 flex-shrink-0">
                     <span
                       class="text-sm font-medium text-gray-500 capitalize"
                       x-show="!slot.isCustom"
@@ -201,54 +202,37 @@ const base = import.meta.env.BASE_URL;
                     />
                   </div>
 
-                  <!-- Zawartość: wybrany przepis + zmień / wybierz + picker -->
-                  <div class="flex min-w-0 flex-1 flex-col">
+                  <!-- Wybrany przepis lub przycisk wyboru -->
+                  <div class="flex min-w-0 flex-1 items-center gap-2">
 
                     <!-- Wybrany przepis -->
-                    <div x-show="slot.recipeId" class="flex flex-wrap items-center gap-2 pt-2">
-                      <span
-                        class="text-sm font-medium text-gray-900"
-                        x-text="recipeTitle(slot.recipeId)"
-                      ></span>
-                      <button
-                        type="button"
-                        @click="clearRecipe(dayIdx, slotIdx)"
-                        class="inline-flex min-h-[28px] min-w-[28px] items-center justify-center text-gray-400 hover:text-red-500 text-lg leading-none transition"
-                        aria-label="Usuń przepis"
-                      >✕</button>
-                      <button
-                        type="button"
-                        @click="togglePicker(dayIdx, slotIdx)"
-                        class="inline-flex min-h-[28px] items-center text-xs font-medium text-gray-400 hover:text-green-700 underline transition"
-                      >zmień</button>
-                    </div>
-
-                    <!-- Brak przepisu: przycisk wybierz -->
-                    <div x-show="!slot.recipeId" class="pt-2">
-                      <button
-                        type="button"
-                        @click="togglePicker(dayIdx, slotIdx)"
-                        class="inline-flex min-h-[36px] items-center text-sm text-gray-400 hover:text-green-700 transition"
-                      >
-                        <span x-show="!isPickerOpen(dayIdx, slotIdx)">+ wybierz przepis</span>
-                        <span x-show="isPickerOpen(dayIdx, slotIdx)">▲ schowaj listę</span>
-                      </button>
-                    </div>
-
-                    <!-- Picker: lista przepisów -->
-                    <div x-show="isPickerOpen(dayIdx, slotIdx)" class="mt-2 flex flex-wrap gap-1.5">
-                      <template x-for="r in allRecipes" :key="r.id">
+                    <template x-if="slot.recipeId">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm font-medium text-gray-900" x-text="recipeTitle(slot.recipeId)"></span>
                         <button
                           type="button"
-                          @click="setRecipe(dayIdx, slotIdx, r.id)"
-                          x-bind:class="slot.recipeId === r.id
-                            ? 'bg-green-600 text-white border-green-600'
-                            : 'border-gray-300 text-gray-700 hover:border-green-400 hover:text-green-700'"
-                          class="min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition"
-                          x-text="r.title"
-                        ></button>
-                      </template>
-                    </div>
+                          @click="goPickRecipe(dayIdx, slotIdx)"
+                          class="inline-flex min-h-[28px] items-center rounded-md px-2 py-0.5 text-xs font-medium text-gray-400 hover:text-green-700 hover:bg-green-50 transition"
+                        >zmień</button>
+                        <button
+                          type="button"
+                          @click="clearRecipe(dayIdx, slotIdx)"
+                          class="inline-flex min-h-[28px] min-w-[28px] items-center justify-center text-gray-300 hover:text-red-400 text-lg leading-none transition"
+                          aria-label="Usuń przepis"
+                        >✕</button>
+                      </div>
+                    </template>
+
+                    <!-- Brak przepisu: przycisk wybierz -->
+                    <template x-if="!slot.recipeId">
+                      <button
+                        type="button"
+                        @click="goPickRecipe(dayIdx, slotIdx)"
+                        class="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 text-sm text-gray-400 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition"
+                      >
+                        <span class="text-base leading-none">+</span> wybierz przepis
+                      </button>
+                    </template>
 
                   </div>
 
@@ -257,7 +241,7 @@ const base = import.meta.env.BASE_URL;
                     x-show="slot.isCustom"
                     type="button"
                     @click="removeSlot(dayIdx, slotIdx)"
-                    class="flex-shrink-0 inline-flex min-h-[36px] items-start pt-2 text-xs font-medium text-red-400 hover:text-red-600 transition"
+                    class="flex-shrink-0 inline-flex min-h-[36px] items-center text-xs font-medium text-red-300 hover:text-red-500 transition"
                     aria-label="Usuń posiłek"
                   >
                     Usuń
@@ -277,6 +261,111 @@ const base = import.meta.env.BASE_URL;
             </button>
           </div>
         </template>
+      </div>
+
+    </div>
+
+    <!-- ══ WIDOK: WYBÓR PRZEPISU (menu restauracyjne) ══════════════════════ -->
+    <div x-show="view === 'pick'" style="display:none">
+
+      <!-- Nagłówek pickera -->
+      <div class="mb-5 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          @click="view = 'edit'; pickingCtx = null"
+          class="inline-flex min-h-[44px] items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition"
+        >
+          ← Wróć do planu
+        </button>
+        <div class="flex-1">
+          <h1 class="text-2xl font-bold text-gray-900">
+            Co na <span class="capitalize" x-text="pickingCtx?.slotName ?? 'posiłek'"></span>?
+          </h1>
+          <p class="text-sm text-gray-500" x-text="pickingCtx ? formatDate(pickingCtx.dayDate) : ''"></p>
+        </div>
+      </div>
+
+      <!-- Filtry tagów -->
+      <div class="mb-5 flex flex-wrap gap-2">
+        <button
+          type="button"
+          @click="pickFilter = ''"
+          x-bind:class="pickFilter === ''
+            ? 'bg-gray-800 text-white border-gray-800'
+            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-500'"
+          class="min-h-[36px] rounded-full border px-4 text-sm font-medium transition"
+        >
+          Wszystkie
+        </button>
+        <template x-for="tag in allTags" :key="tag">
+          <button
+            type="button"
+            @click="pickFilter = pickFilter === tag ? '' : tag"
+            x-bind:class="pickFilter === tag
+              ? 'bg-gray-800 text-white border-gray-800'
+              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-500'"
+            class="min-h-[36px] rounded-full border px-4 text-sm font-medium capitalize transition"
+            x-text="tag"
+          ></button>
+        </template>
+      </div>
+
+      <!-- Siatka kart przepisów -->
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <template x-for="r in filteredRecipes" :key="r.id">
+          <button
+            type="button"
+            @click="pickRecipe(r.id)"
+            x-bind:class="isCurrentRecipe(r.id)
+              ? 'ring-2 ring-green-500 ring-offset-2 shadow-md'
+              : 'hover:shadow-lg hover:border-green-200'"
+            class="group relative text-left rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm transition-all duration-200 active:scale-[0.98]"
+          >
+            <!-- Kolorowy nagłówek karty z emoji -->
+            <div
+              class="flex h-28 items-center justify-center text-5xl"
+              x-bind:class="tagBg(r.tags)"
+            >
+              <span x-text="tagEmoji(r.tags)"></span>
+            </div>
+
+            <!-- Checkmark gdy wybrany -->
+            <div
+              x-show="isCurrentRecipe(r.id)"
+              class="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white text-sm font-bold shadow-md"
+            >✓</div>
+
+            <!-- Treść karty -->
+            <div class="p-4">
+              <h3 class="mb-2 text-base font-semibold text-gray-900 leading-snug" x-text="r.title"></h3>
+              <div class="mb-3 flex flex-wrap gap-1">
+                <template x-for="tag in r.tags" :key="tag">
+                  <span
+                    class="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                    x-bind:class="tagPillColor(tag)"
+                    x-text="tag"
+                  ></span>
+                </template>
+              </div>
+              <p class="text-xs text-gray-400">
+                ⏱ <span x-text="r.prepTimeMinutes + ' min'"></span>
+              </p>
+            </div>
+          </button>
+        </template>
+      </div>
+
+      <!-- Stan pusty filtrowania -->
+      <div
+        x-show="filteredRecipes.length === 0"
+        class="py-12 text-center text-sm text-gray-400"
+      >
+        Brak przepisów dla wybranego filtra.
+        <button
+          type="button"
+          @click="pickFilter = ''"
+          class="ml-1 underline hover:text-gray-700"
+        >Pokaż wszystkie.</button>
       </div>
 
     </div>
@@ -349,19 +438,67 @@ const base = import.meta.env.BASE_URL;
       .format(new Date(iso + 'T12:00:00'));
   }
 
+  // ── Tag → emoji / color ────────────────────────────────────────────────────
+  const TAG_EMOJI = {
+    śniadanie:      '🥞',
+    obiad:          '🍽️',
+    kolacja:        '🌙',
+    deser:          '🍰',
+    zupa:           '🍲',
+    makaron:        '🍝',
+    sałatka:        '🥗',
+    wegetariańskie: '🥦',
+  };
+
+  const TAG_BG = {
+    śniadanie:      'bg-amber-50',
+    obiad:          'bg-blue-50',
+    kolacja:        'bg-indigo-50',
+    deser:          'bg-pink-50',
+    zupa:           'bg-orange-50',
+    makaron:        'bg-yellow-50',
+    sałatka:        'bg-green-50',
+    wegetariańskie: 'bg-emerald-50',
+  };
+
+  const TAG_PILL = {
+    śniadanie:      'bg-amber-100 text-amber-700',
+    obiad:          'bg-blue-100 text-blue-700',
+    kolacja:        'bg-indigo-100 text-indigo-700',
+    deser:          'bg-pink-100 text-pink-700',
+    zupa:           'bg-orange-100 text-orange-700',
+    makaron:        'bg-yellow-100 text-yellow-700',
+    sałatka:        'bg-green-100 text-green-700',
+    wegetariańskie: 'bg-emerald-100 text-emerald-700',
+  };
+
   // ── Alpine component ───────────────────────────────────────────────────────
   window.plannerApp = function plannerApp() {
     return {
-      view: 'list',            // 'list' | 'create' | 'edit'
+      view: 'list',            // 'list' | 'create' | 'edit' | 'pick'
       plans: [],
       activeForShopping: null,
       editingId: null,
       newStart: todayISO(),
       newEnd: addDaysToISO(todayISO(), 6),
-      openPicker: {},          // { [`${dayIdx}-${slotIdx}`]: boolean }
+      pickingCtx: null,        // { dayIdx, slotIdx, dayDate, slotName }
+      pickFilter: '',          // aktywny filtr tagu w widoku pick
 
       // ── Computed ────────────────────────────────────────────────────────
       get allRecipes() { return recipesArr; },
+
+      get allTags() {
+        const tags = new Set();
+        for (const r of recipesArr) {
+          for (const tag of (r.tags ?? [])) tags.add(tag);
+        }
+        return [...tags];
+      },
+
+      get filteredRecipes() {
+        if (!this.pickFilter) return recipesArr;
+        return recipesArr.filter((r) => (r.tags ?? []).includes(this.pickFilter));
+      },
 
       get editingPlan() {
         return this.plans.find((p) => p.id === this.editingId) ?? null;
@@ -412,6 +549,30 @@ const base = import.meta.env.BASE_URL;
         return s.charAt(0).toUpperCase() + s.slice(1);
       },
 
+      isCurrentRecipe(recipeId) {
+        if (!this.pickingCtx || !this.editingPlan) return false;
+        const { dayIdx, slotIdx } = this.pickingCtx;
+        return this.editingPlan.days[dayIdx]?.slots?.[slotIdx]?.recipeId === recipeId;
+      },
+
+      tagEmoji(tags) {
+        for (const tag of (tags ?? [])) {
+          if (TAG_EMOJI[tag]) return TAG_EMOJI[tag];
+        }
+        return '🍴';
+      },
+
+      tagBg(tags) {
+        for (const tag of (tags ?? [])) {
+          if (TAG_BG[tag]) return TAG_BG[tag];
+        }
+        return 'bg-gray-50';
+      },
+
+      tagPillColor(tag) {
+        return TAG_PILL[tag] ?? 'bg-gray-100 text-gray-600';
+      },
+
       // ── Navigation ──────────────────────────────────────────────────────
       goCreate() {
         this.view = 'create';
@@ -420,13 +581,28 @@ const base = import.meta.env.BASE_URL;
       goList() {
         this.view = 'list';
         this.editingId = null;
-        this.openPicker = {};
+        this.pickingCtx = null;
       },
 
       goEdit(id) {
         this.editingId = id;
         this.view = 'edit';
-        this.openPicker = {};
+        this.pickingCtx = null;
+      },
+
+      goPickRecipe(dayIdx, slotIdx) {
+        const plan = this.editingPlan;
+        if (!plan) return;
+        const slot = plan.days[dayIdx].slots[slotIdx];
+        this.pickingCtx = {
+          dayIdx,
+          slotIdx,
+          dayDate: plan.days[dayIdx].date,
+          slotName: slot.name,
+        };
+        // Pre-filtruj po nazwie slotu jeśli pasuje do tagu (śniadanie/obiad/kolacja)
+        this.pickFilter = this.allTags.includes(slot.name) ? slot.name : '';
+        this.view = 'pick';
       },
 
       // ── Plan CRUD ───────────────────────────────────────────────────────
@@ -451,13 +627,16 @@ const base = import.meta.env.BASE_URL;
       },
 
       // ── Slot editing ────────────────────────────────────────────────────
-      setRecipe(dayIdx, slotIdx, recipeId) {
+      pickRecipe(recipeId) {
+        if (!this.pickingCtx) return;
+        const { dayIdx, slotIdx } = this.pickingCtx;
         const plan = this.plans.find((p) => p.id === this.editingId);
         if (!plan) return;
         plan.days[dayIdx].slots[slotIdx].recipeId = recipeId;
-        // Reset picker with new object to trigger reactivity
-        this.openPicker = { ...this.openPicker, [`${dayIdx}-${slotIdx}`]: false };
         this._save();
+        // Wróć do edytora po wyborze
+        this.view = 'edit';
+        this.pickingCtx = null;
       },
 
       clearRecipe(dayIdx, slotIdx) {
@@ -484,15 +663,6 @@ const base = import.meta.env.BASE_URL;
         if (!plan) return;
         plan.days[dayIdx].slots.splice(slotIdx, 1);
         this._save();
-      },
-
-      togglePicker(dayIdx, slotIdx) {
-        const key = `${dayIdx}-${slotIdx}`;
-        this.openPicker = { ...this.openPicker, [key]: !this.openPicker[key] };
-      },
-
-      isPickerOpen(dayIdx, slotIdx) {
-        return !!this.openPicker[`${dayIdx}-${slotIdx}`];
       },
 
       // ── Shopping list ───────────────────────────────────────────────────

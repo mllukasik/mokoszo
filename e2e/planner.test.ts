@@ -3,6 +3,7 @@
  *   - lista planów (widok 'list')
  *   - tworzenie planu z zakresem dat (widok 'create')
  *   - edytor dni i posiłków (widok 'edit')
+ *   - pełnoekranowy picker przepisów (widok 'pick')
  */
 import { test, expect, type Page } from '@playwright/test';
 
@@ -19,7 +20,6 @@ async function clearPlans(page: Page) {
 async function waitForListView(page: Page) {
   await page.waitForFunction(
     () => {
-      // Przycisk "Nowy plan" jest widoczny gdy view === 'list'
       const btn = Array.from(document.querySelectorAll('button')).find(
         (b) => b.textContent?.trim() === '+ Nowy plan'
       );
@@ -39,18 +39,43 @@ async function waitForCreateView(page: Page) {
 async function waitForEditView(page: Page, minDays = 1) {
   await page.waitForFunction(
     (n: number) => {
-      // Przycisk "← Plany" jest obecny tylko w edytorze
       const back = Array.from(document.querySelectorAll('button')).find(
         (b) => b.textContent?.trim() === '← Plany'
       );
       if (!back || window.getComputedStyle(back).display === 'none') return false;
-      // Karty dni (rounded-xl w .space-y-4)
       const cards = document.querySelectorAll('.space-y-4 > div.rounded-xl');
       return cards.length >= n;
     },
     minDays,
     { timeout: 10_000 }
   );
+}
+
+/** Czeka aż widok wyboru przepisu (picker) jest widoczny. */
+async function waitForPickView(page: Page) {
+  await page.getByRole('button', { name: '← Wróć do planu' }).waitFor({
+    state: 'visible',
+    timeout: 8_000,
+  });
+}
+
+/**
+ * Klika "wybierz przepis" w podanym dayLocator dla pierwszego pustego slotu,
+ * czeka na widok pickera, klika pierwszą kartę przepisu, wraca do edytora.
+ * Zwraca tytuł wybranego przepisu.
+ */
+async function pickFirstRecipe(page: Page, dayLocator: ReturnType<Page['locator']>, minDays = 1): Promise<string> {
+  await dayLocator.getByText('+ wybierz przepis').first().click();
+  await waitForPickView(page);
+
+  // Karty przepisów: <button> bezpośrednio w siatce (.grid > button)
+  const firstCard = page.locator('.grid > button').first();
+  await firstCard.waitFor({ state: 'visible', timeout: 5_000 });
+  const recipeName = (await firstCard.locator('h3').textContent())!.trim();
+  await firstCard.click();
+
+  await waitForEditView(page, minDays);
+  return recipeName;
 }
 
 /** Tworzy plan przez UI. Zwraca po przejściu do widoku edytora. */
@@ -119,7 +144,6 @@ test.describe('Planer — tworzenie nowego planu', () => {
     await waitForCreateView(page);
     await page.fill('#plan-start', '2026-08-12');
     await page.fill('#plan-end', '2026-08-14');
-    // Powinno pokazać "Plan obejmie 3 dni."
     await expect(page.getByText('3 dni')).toBeVisible();
   });
 
@@ -155,7 +179,6 @@ test.describe('Planer — tworzenie nowego planu', () => {
     await page.getByRole('button', { name: '← Plany' }).click();
     await waitForListView(page);
 
-    // Karta planu powinna być widoczna (szuka daty w krótkim formacie)
     await expect(page.locator('.grid > div').filter({ hasText: 'sie' }).first()).toBeVisible();
   });
 });
@@ -171,36 +194,70 @@ test.describe('Planer — edytor planu', () => {
   });
 
   test('nagłówek edytora pokazuje zakres dat planu', async ({ page }) => {
-    // h1 w edytorze powinien zawierać krótki format daty
     const heading = page.locator('h1').filter({ visible: true });
     await expect(heading).toContainText('sie');
   });
 
-  test('można wybrać przepis dla slotu śniadanie w dniu 1', async ({ page }) => {
+  test('kliknięcie slotu otwiera pełnoekranowy picker przepisów', async ({ page }) => {
     const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
-
-    // Kliknij "wybierz przepis" w pierwszym slocie (śniadanie)
     await firstDay.getByText('+ wybierz przepis').first().click();
 
-    // Pojawi się picker z przepisami
-    const picker = firstDay.locator('.flex.flex-wrap.gap-1\\.5');
-    await expect(picker.first()).toBeVisible();
+    await waitForPickView(page);
 
-    // Kliknij pierwszy przepis w pickerze
-    const firstRecipeBtn = picker.first().getByRole('button').first();
-    const recipeName = (await firstRecipeBtn.textContent())!.trim();
-    await firstRecipeBtn.click();
+    // Nagłówek pickera zawiera "Co na"
+    await expect(page.locator('h1').filter({ visible: true })).toContainText('Co na');
+    // Karty przepisów są widoczne
+    await expect(page.locator('.grid > button').first()).toBeVisible();
+  });
+
+  test('picker prefiltruje po nazwie slotu (śniadanie)', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await firstDay.getByText('+ wybierz przepis').first().click();
+    await waitForPickView(page);
+
+    // Filtr "śniadanie" powinien być aktywny (bg-gray-800)
+    const sniadanieBtn = page.getByRole('button', { name: 'śniadanie' });
+    await expect(sniadanieBtn).toHaveClass(/bg-gray-800/);
+  });
+
+  test('"← Wróć do planu" w pickerze cofa do edytora bez zmiany', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await firstDay.getByText('+ wybierz przepis').first().click();
+    await waitForPickView(page);
+
+    await page.getByRole('button', { name: '← Wróć do planu' }).click();
+    await waitForEditView(page, 3);
+
+    // Slot nadal pusty
+    await expect(firstDay.getByText('+ wybierz przepis').first()).toBeVisible();
+  });
+
+  test('można wybrać przepis przez picker dla slotu śniadanie', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    const recipeName = await pickFirstRecipe(page, firstDay, 3);
 
     // Wybrany przepis pojawia się w slocie
     await expect(firstDay).toContainText(recipeName);
+    // Przycisk "+ wybierz przepis" znika
+    await expect(firstDay.getByText('+ wybierz przepis').first()).not.toBeVisible();
+  });
+
+  test('wybrany przepis pokazuje checkmark w pickerze gdy ponownie otwarty', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await pickFirstRecipe(page, firstDay, 3);
+
+    // Otwórz "zmień" dla tego samego slotu
+    await firstDay.getByRole('button', { name: 'zmień' }).first().click();
+    await waitForPickView(page);
+
+    // Pierwsza karta (wybrany przepis) ma checkmark ✓
+    const firstCard = page.locator('.grid > button').first();
+    await expect(firstCard.locator('.bg-green-500')).toBeVisible();
   });
 
   test('wybrany przepis można wyczyścić (✕)', async ({ page }) => {
     const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
-
-    // Wybierz przepis
-    await firstDay.getByText('+ wybierz przepis').first().click();
-    await firstDay.locator('.flex.flex-wrap.gap-1\\.5').first().getByRole('button').first().click();
+    await pickFirstRecipe(page, firstDay, 3);
     await page.waitForTimeout(200);
 
     // Wyczyść przez ✕
@@ -209,6 +266,21 @@ test.describe('Planer — edytor planu', () => {
 
     // Slot znów pokazuje "+ wybierz przepis"
     await expect(firstDay.getByText('+ wybierz przepis').first()).toBeVisible();
+  });
+
+  test('filtr tagów w pickerze — "Wszystkie" pokazuje wszystkie przepisy', async ({ page }) => {
+    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
+    await firstDay.getByText('+ wybierz przepis').first().click();
+    await waitForPickView(page);
+
+    const countWithFilter = await page.locator('.grid > button').count();
+
+    // Kliknij "Wszystkie"
+    await page.getByRole('button', { name: 'Wszystkie' }).click();
+    const countAll = await page.locator('.grid > button').count();
+
+    // Po wyczyszczeniu filtra liczba kart >= poprzednia (może być więcej)
+    expect(countAll).toBeGreaterThanOrEqual(countWithFilter);
   });
 
   test('można dodać własny slot w dniu 1', async ({ page }) => {
@@ -221,7 +293,6 @@ test.describe('Planer — edytor planu', () => {
     const slotsAfter = await firstDay.locator('.space-y-2 > div.rounded-lg').count();
     expect(slotsAfter).toBe(slotsBefore + 1);
 
-    // Nowy slot zawiera tekst "Własny posiłek"
     await expect(firstDay.locator('.space-y-2 > div.rounded-lg').last()).toContainText(
       'Własny posiłek'
     );
@@ -243,17 +314,13 @@ test.describe('Planer — edytor planu', () => {
 
   test('plan persystuje po odświeżeniu strony', async ({ page }) => {
     const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
-    await firstDay.getByText('+ wybierz przepis').first().click();
-    const recipePill = firstDay.locator('.flex.flex-wrap.gap-1\\.5').first().getByRole('button').first();
-    const recipeName = (await recipePill.textContent())!.trim();
-    await recipePill.click();
+    const recipeName = await pickFirstRecipe(page, firstDay, 3);
     await page.waitForTimeout(300);
 
     await page.reload();
-    // Po przeładowaniu: lista planów (Alpine resetuje view do 'list')
     await waitForListView(page);
 
-    // Plan jest na liście — możemy go otworzyć
+    // Otwórz plan z listy
     await page.locator('.grid > div').filter({ hasText: 'sie' }).first()
       .getByRole('button', { name: 'Edytuj' }).click();
     await waitForEditView(page, 3);
@@ -269,8 +336,7 @@ test.describe('Planer — edytor planu', () => {
 
   test('przycisk "Lista zakupów" aktywny po wybraniu przepisu', async ({ page }) => {
     const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
-    await firstDay.getByText('+ wybierz przepis').first().click();
-    await firstDay.locator('.flex.flex-wrap.gap-1\\.5').first().getByRole('button').first().click();
+    await pickFirstRecipe(page, firstDay, 3);
     await page.waitForTimeout(200);
 
     const shoppingBtn = page.getByRole('button', { name: '🛒 Lista zakupów' });
@@ -287,18 +353,15 @@ test.describe('Planer — usuwanie i wiele planów', () => {
   });
 
   test('można usunąć plan z listy', async ({ page }) => {
-    // Utwórz plan
     await createPlanViaUI(page, '2026-08-12', '2026-08-12');
     await waitForEditView(page, 1);
     await page.getByRole('button', { name: '← Plany' }).click();
     await waitForListView(page);
 
-    // Usuń
-    page.on('dialog', (dialog) => dialog.accept()); // confirm() → OK
+    page.on('dialog', (dialog) => dialog.accept());
     await page.locator('.grid > div').first().getByRole('button', { name: 'Usuń' }).click();
     await page.waitForTimeout(300);
 
-    // Lista pusta
     await expect(page.getByText('Brak planów')).toBeVisible();
   });
 
