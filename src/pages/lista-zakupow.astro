@@ -79,6 +79,26 @@ const categoryLabels: Record<string, string> = {
         </a>
       </div>
 
+      <!-- Selektor planu — widoczny gdy mamy >1 plan -->
+      <div x-show="plans.length > 1" class="mb-6">
+        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Wybrany plan
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <template x-for="p in plans" :key="p.id">
+            <button
+              type="button"
+              @click="selectPlan(p.id)"
+              x-bind:class="p.id === activePlanId
+                ? 'bg-green-600 text-white border-green-600'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+              class="min-h-[44px] rounded-xl border px-4 py-2 text-sm font-medium transition"
+              x-text="planLabel(p)"
+            ></button>
+          </template>
+        </div>
+      </div>
+
       <!-- Makra -->
       <MacrosSummary />
 
@@ -94,20 +114,31 @@ const categoryLabels: Record<string, string> = {
 
   window.shoppingListPage = function shoppingListPage() {
     /**
-     * Wczytuje aktywny plan (wskazany przez activeForShopping) z nowego formatu v2.
-     * Zwraca null jeśli brak danych lub uszkodzony wpis.
+     * Wczytuje dane z localStorage: wszystkie plany + aktywny id.
+     * Zwraca { plans: [], activeId: null } jeśli brak danych lub uszkodzony wpis.
      */
-    function loadActivePlan() {
+    function loadStorage() {
       try {
         const raw = localStorage.getItem(PLANS_KEY);
-        if (!raw) return null;
+        if (!raw) return { plans: [], activeId: null };
         const p = JSON.parse(raw);
-        if (p.version !== 2 || !Array.isArray(p.plans)) return null;
-        const id = p.activeForShopping;
-        if (!id) return null;
-        return p.plans.find((plan) => plan.id === id) ?? null;
+        if (p.version !== 2 || !Array.isArray(p.plans)) return { plans: [], activeId: null };
+        return { plans: p.plans, activeId: p.activeForShopping ?? null };
       } catch {
-        return null;
+        return { plans: [], activeId: null };
+      }
+    }
+
+    /** Zapisuje activeForShopping bez zmiany reszty danych. */
+    function persistActive(planId) {
+      try {
+        const raw = localStorage.getItem(PLANS_KEY);
+        if (!raw) return;
+        const p = JSON.parse(raw);
+        p.activeForShopping = planId;
+        localStorage.setItem(PLANS_KEY, JSON.stringify(p));
+      } catch {
+        // ignorujemy
       }
     }
 
@@ -176,11 +207,13 @@ const categoryLabels: Record<string, string> = {
     }
 
     return {
-      plan: null,
-      list: {},       // { [category]: ShoppingItem[] }
-      macros: null,   // { calories, protein, fat, carbs }
-      checked: {},    // { [ingredientId]: boolean } — tylko sesja, bez persystencji
-      openCats: {},   // { [category]: boolean } — zwinięte/rozwinięte
+      plans: [],          // wszystkie plany użytkownika
+      activePlanId: null, // id aktywnego planu
+      plan: null,         // obiekt aktywnego planu
+      list: {},           // { [category]: ShoppingItem[] }
+      macros: null,       // { calories, protein, fat, carbs }
+      checked: {},        // { [ingredientId]: boolean } — tylko sesja, bez persystencji
+      openCats: {},       // { [category]: boolean } — zwinięte/rozwinięte
 
       /** Czy plan jest pusty (brak lub żaden slot nie ma przepisu). */
       get isEmpty() {
@@ -189,15 +222,20 @@ const categoryLabels: Record<string, string> = {
         );
       },
 
-      /** Etykieta planu (zakres dat) do wyświetlenia jako podtytuł. */
-      get planName() {
-        if (!this.plan || !this.plan.days.length) return '';
-        const days = this.plan.days;
+      /** Etykieta planu (zakres dat) do wyświetlenia jako podtytuł lub przycisk selektora. */
+      planLabel(p) {
+        if (!p || !p.days.length) return 'Plan';
+        const days = p.days;
         const fmt = (iso) =>
-          new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long' })
+          new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'short' })
             .format(new Date(iso + 'T12:00:00'));
         if (days.length === 1) return fmt(days[0].date);
         return `${fmt(days[0].date)} – ${fmt(days[days.length - 1].date)}`;
+      },
+
+      /** Etykieta aktywnego planu do wyświetlenia jako podtytuł nagłówka. */
+      get planName() {
+        return this.plan ? this.planLabel(this.plan) : '';
       },
 
       /** Kategorie w kolejności z CATEGORY_ORDER, tylko te z zawartością. */
@@ -213,20 +251,38 @@ const categoryLabels: Record<string, string> = {
         this.checked[ingredientId] = !this.checked[ingredientId];
       },
 
-      init() {
-        this.plan = loadActivePlan();
-        if (!this.isEmpty) {
-          // Zbierz wszystkie recipeId ze slotów wszystkich dni
-          const allIds = this.plan.days.flatMap((d) =>
-            (d.slots ?? []).map((s) => s.recipeId).filter(Boolean)
-          );
-          this.list   = buildList(allIds);
-          this.macros = computeMacros(allIds);
-          // Wszystkie kategorie domyślnie rozwinięte
-          for (const cat of CATEGORY_ORDER) {
-            this.openCats[cat] = true;
-          }
+      /** Przełącza aktywny plan i przelicza listę zakupów. */
+      selectPlan(planId) {
+        const p = this.plans.find((pl) => pl.id === planId);
+        if (!p) return;
+        this.activePlanId = planId;
+        this.plan = p;
+        this.checked = {};
+        persistActive(planId);
+        this._rebuild();
+      },
+
+      /** Przebudowuje list + macros z aktywnego planu. */
+      _rebuild() {
+        if (this.isEmpty) return;
+        const allIds = this.plan.days.flatMap((d) =>
+          (d.slots ?? []).map((s) => s.recipeId).filter(Boolean)
+        );
+        this.list   = buildList(allIds);
+        this.macros = computeMacros(allIds);
+        for (const cat of CATEGORY_ORDER) {
+          this.openCats[cat] = true;
         }
+      },
+
+      init() {
+        const { plans, activeId } = loadStorage();
+        this.plans = plans;
+        // Wybierz aktywny plan: preferuj activeId, fallback na pierwszy
+        const active = plans.find((p) => p.id === activeId) ?? plans[0] ?? null;
+        this.plan = active;
+        this.activePlanId = active?.id ?? null;
+        this._rebuild();
       },
     };
   };
