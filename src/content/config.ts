@@ -16,6 +16,7 @@ const recipes = defineCollection({
         })
       )
       .nonempty(),
+    image: z.string().optional(),
   }),
 });
 

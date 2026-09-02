@@ -17,7 +17,7 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content } = await render(entry);
 
-const { title, servings, prepTimeMinutes, tags, ingredients: recipeIngredients } = entry.data;
+const { title, servings, prepTimeMinutes, tags, ingredients: recipeIngredients, image } = entry.data;
 
 const allIngredients = getIngredients();
 const ingredientMap = new Map(allIngredients.map((i) => [i.id, i]));
@@ -63,6 +63,17 @@ const base = import.meta.env.BASE_URL;
       ))}
     </div>
   </div>
+
+  {image && (
+    <div class="mb-8 overflow-hidden rounded-2xl">
+      <img
+        src={`${base}${image}`}
+        alt={title}
+        class="h-64 w-full object-cover sm:h-80 lg:h-96"
+        loading="lazy"
+      />
+    </div>
+  )}
 
   <div class="lg:grid lg:grid-cols-3 lg:gap-8">
     <!-- Sidebar: składniki + makra -->

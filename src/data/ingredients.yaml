@@ -215,6 +215,20 @@
 
 # --- OWOCE ---
 
+- id: sliwki
+  displayName: Śliwki
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: owoce
+  nutritionPerUnit:
+    calories: 30
+    protein: 0.5
+    fat: 0.2
+    carbs: 7.5
+
 - id: banan
   displayName: Banan
   unit:
@@ -502,6 +516,34 @@
     protein: 0
     fat: 0
     carbs: 0
+
+- id: proszek-do-pieczenia
+  displayName: Proszek do pieczenia
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 0.53
+    protein: 0
+    fat: 0
+    carbs: 0.28
+
+- id: cukier-wanilinowy
+  displayName: Cukier wanilinowy
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 3.87
+    protein: 0
+    fat: 0
+    carbs: 1.0
 
 - id: cukier
   displayName: Cukier
