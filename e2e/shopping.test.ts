@@ -2,12 +2,13 @@ import { test, expect, type Page } from '@playwright/test';
 
 const URL = '/mokoszo/lista-zakupow/';
 const PLANS_KEY = 'mokoszo:plans:v2';
+const DAYS_KEY  = 'mokoszo:days:v3';
 
 type DaySpec = { date: string; recipeIds: string[] };
 
 /**
  * Tworzy i zapisuje plan v2 do localStorage.
- * recipeGroups to lista dni z przypisanymi przepisami (każdy przepis = osobny slot).
+ * Usuwa też v3 — żeby migracja zawsze działała na świeżo.
  */
 async function setPlan(page: Page, days: DaySpec[]) {
   const planId = 'test-plan-1';
@@ -31,13 +32,19 @@ async function setPlan(page: Page, days: DaySpec[]) {
     activeForShopping: planId,
   };
   await page.evaluate(
-    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
-    { key: PLANS_KEY, data: storage }
+    ({ pKey, dKey, data }) => {
+      localStorage.setItem(pKey, JSON.stringify(data));
+      localStorage.removeItem(dKey); // wymuszamy świeżą migrację
+    },
+    { pKey: PLANS_KEY, dKey: DAYS_KEY, data: storage }
   );
 }
 
 async function clearPlan(page: Page) {
-  await page.evaluate((key) => localStorage.removeItem(key), PLANS_KEY);
+  await page.evaluate(
+    ({ pKey, dKey }) => { localStorage.removeItem(pKey); localStorage.removeItem(dKey); },
+    { pKey: PLANS_KEY, dKey: DAYS_KEY }
+  );
 }
 
 /** Czeka aż Alpine przetworzy shoppingListPage i pokaże odpowiedni widok. */

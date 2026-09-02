@@ -79,7 +79,7 @@ async function addDayViaUI(page: Page, date: string) {
   await page.getByRole('button', { name: '+ Dodaj dzień' }).first().click();
   await page.locator('#new-day-date').waitFor({ state: 'visible', timeout: 5_000 });
   await page.fill('#new-day-date', date);
-  await page.getByRole('button', { name: 'Dodaj' }).click();
+  await page.getByRole('button', { name: 'Dodaj', exact: true }).click();
   await waitForEditView(page);
 }
 
@@ -144,7 +144,7 @@ test.describe('Planer — dodawanie dnia', () => {
   test('kliknięcie "+ Dodaj dzień" pokazuje formularz z polem daty', async ({ page }) => {
     await page.getByRole('button', { name: '+ Dodaj dzień' }).first().click();
     await expect(page.locator('#new-day-date')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Dodaj' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Dodaj', exact: true })).toBeVisible();
   });
 
   test('"Anuluj" chowa formularz', async ({ page }) => {
@@ -171,8 +171,8 @@ test.describe('Planer — dodawanie dnia', () => {
     await addDayViaUI(page, '2026-08-12');
     await page.getByRole('button', { name: '← Wszystkie dni' }).click();
     await waitForListView(page);
-    // Day row exists — data nie musi być po polsku, wystarczy przycisk "Edytuj"
-    await expect(page.getByRole('button', { name: 'Edytuj' }).first()).toBeVisible();
+    // Day row exists — x-for może potrzebować chwili na render
+    await expect(page.getByRole('button', { name: 'Edytuj' }).first()).toBeVisible({ timeout: 8_000 });
   });
 
   test('link "Idź do listy zakupów" widoczny gdy są dni', async ({ page }) => {
@@ -307,6 +307,8 @@ test.describe('Planer — usuwanie dnia', () => {
     await addDayViaUI(page, '2026-08-12');
     await page.getByRole('button', { name: '← Wszystkie dni' }).click();
     await waitForListView(page);
+    // Poczekaj aż x-for renderuje wiersz dnia
+    await page.getByRole('button', { name: 'Edytuj' }).first().waitFor({ state: 'visible', timeout: 8_000 });
 
     page.on('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Usuń dzień' }).first().click();

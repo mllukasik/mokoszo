@@ -6,10 +6,14 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const PLANS_KEY = 'mokoszo:plans:v2';
+const DAYS_KEY  = 'mokoszo:days:v3';
 
 // ─── Storage helpers ─────────────────────────────────────────────────────────
 
-/** Tworzy v2-plan z listą dni i recipeIds, ustawia activeForShopping. */
+/**
+ * Tworzy v2-plan z listą dni i recipeIds.
+ * Usuwa też v3 — żeby migracja zawsze działała na świeżo.
+ */
 async function setPlanV2(page: Page, days: { date: string; recipeIds: string[] }[]) {
   const planId = 'test-plan-1';
   const storage = {
@@ -32,13 +36,19 @@ async function setPlanV2(page: Page, days: { date: string; recipeIds: string[] }
     activeForShopping: planId,
   };
   await page.evaluate(
-    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
-    { key: PLANS_KEY, data: storage }
+    ({ pKey, dKey, data }) => {
+      localStorage.setItem(pKey, JSON.stringify(data));
+      localStorage.removeItem(dKey); // wymuszamy świeżą migrację
+    },
+    { pKey: PLANS_KEY, dKey: DAYS_KEY, data: storage }
   );
 }
 
 async function clearAll(page: Page) {
-  await page.evaluate((key) => localStorage.removeItem(key), PLANS_KEY);
+  await page.evaluate(
+    ({ pKey, dKey }) => { localStorage.removeItem(pKey); localStorage.removeItem(dKey); },
+    { pKey: PLANS_KEY, dKey: DAYS_KEY }
+  );
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
@@ -130,7 +140,7 @@ test.describe('Test 1 — Pełny flow usera', () => {
     await page.getByRole('button', { name: '+ Dodaj dzień' }).first().click();
     await page.locator('#new-day-date').waitFor({ state: 'visible' });
     await page.fill('#new-day-date', '2026-08-12');
-    await page.getByRole('button', { name: 'Dodaj' }).click();
+    await page.getByRole('button', { name: 'Dodaj', exact: true }).click();
     await waitForEditView(page);
 
     // ── Krok 5: wybierz przepis dla śniadania (Tinder picker) ────────────
