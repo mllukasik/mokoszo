@@ -114,7 +114,7 @@ test.describe('Lista przepisów (/)', () => {
     expect(count).toBe(6);
   });
 
-  test('paginacja: "Następna strona" przechodzi na stronę 2 (4 karty)', async ({ page }) => {
+  test('paginacja: "Następna strona" przechodzi na stronę 2 (5 kart)', async ({ page }) => {
     const nextBtn = page.getByRole('button', { name: 'Następna strona' });
     await nextBtn.waitFor({ state: 'visible', timeout: 3_000 });
     await nextBtn.click();
@@ -123,12 +123,12 @@ test.describe('Lista przepisów (/)', () => {
       () =>
         Array.from(document.querySelectorAll('.grid > div')).filter(
           (el) => window.getComputedStyle(el).display !== 'none'
-        ).length === 4,
+        ).length === 5,
       { timeout: 5_000 }
     );
 
     const count = await visibleCardCount(page);
-    expect(count).toBe(4);
+    expect(count).toBe(5);
   });
 
   test('zmiana filtra resetuje do strony 1', async ({ page }) => {
