@@ -27,7 +27,14 @@
         <div x-show="openCats[cat]">
           <ul class="divide-y divide-gray-100 px-4 pb-2">
             <template x-for="item in list[cat]" :key="item.ingredientId">
-              <li class="flex min-h-[44px] items-center gap-3">
+              <!--
+                x-data na <li> — każdy wiersz ma własny stan tooltipa (tip/timer).
+                Tooltip i ilość mają dostęp do `tip` przez dziedziczenie scope'u Alpine.
+              -->
+              <li
+                class="flex min-h-[44px] items-center gap-3"
+                x-data="{ tip: false, _t: null }"
+              >
                 <!-- Checkbox — min 44px touch target -->
                 <span class="flex min-h-[44px] flex-shrink-0 items-center">
                   <input
@@ -38,42 +45,48 @@
                     x-on:change="toggle(item.ingredientId)"
                   />
                 </span>
+
+                <!--
+                  Label z `relative` — tooltip (position: absolute) będzie
+                  pozycjonowany względem tej etykiety.
+                  Struktura dzieci:
+                    1. span[nazwa]   ← first-child (test: span:first-child)
+                    2. span[ilość]   ← second-child
+                    3. span[tooltip] ← third-child, absolutny, ukryty domyślnie
+                -->
                 <label
-                  class="flex min-h-[44px] flex-1 cursor-pointer items-center justify-between gap-2 select-none"
+                  class="relative flex min-h-[44px] flex-1 cursor-pointer items-center justify-between gap-2 select-none"
                   x-bind:for="'chk-' + item.ingredientId"
                 >
-                  <!-- Nazwa składnika -->
+                  <!-- 1. Nazwa składnika -->
                   <span
                     class="text-base text-gray-900 transition-colors"
                     x-bind:class="checked[item.ingredientId] ? 'line-through text-gray-400' : ''"
                     x-text="item.displayName"
                   ></span>
-                  <!-- Ilość + opcjonalny tooltip z alternatywną jednostką -->
+
+                  <!-- 2. Ilość — z podpowiedzią kursora gdy jest altDisplay -->
                   <span
-                    class="relative flex-shrink-0"
-                    x-data="{ tip: false, _t: null }"
-                    x-bind:class="item.altDisplay ? 'cursor-help' : ''"
+                    class="flex-shrink-0 text-base font-medium text-gray-600 transition-colors"
+                    x-bind:class="[
+                      checked[item.ingredientId] ? 'text-gray-300' : '',
+                      item.altDisplay ? 'underline decoration-dotted decoration-gray-400 cursor-help' : ''
+                    ]"
+                    x-text="item.quantity + ' ' + item.unit"
                     @mouseenter="item.altDisplay && (tip = true)"
                     @mouseleave="tip = false"
                     @touchstart.passive="item.altDisplay && (_t = setTimeout(() => tip = true, 500))"
                     @touchend.passive="clearTimeout(_t)"
                     @touchmove.passive="clearTimeout(_t)"
-                  >
-                    <span
-                      class="text-base font-medium text-gray-600 transition-colors"
-                      x-bind:class="[
-                        checked[item.ingredientId] ? 'text-gray-300' : '',
-                        item.altDisplay ? 'underline decoration-dotted decoration-gray-400' : ''
-                      ]"
-                      x-text="item.quantity + ' ' + item.unit"
-                    ></span>
-                    <span
-                      x-show="tip"
-                      x-transition
-                      class="pointer-events-none absolute right-0 bottom-full z-10 mb-1 rounded bg-gray-800 px-2 py-0.5 text-xs whitespace-nowrap text-white"
-                      x-text="item.altDisplay"
-                    ></span>
-                  </span>
+                  ></span>
+
+                  <!-- 3. Tooltip z alternatywną jednostką (absolute, nad ilością) -->
+                  <span
+                    x-show="tip"
+                    x-transition
+                    class="pointer-events-none absolute right-0 bottom-full z-10 mb-1 rounded bg-gray-800 px-2 py-0.5 text-xs whitespace-nowrap text-white"
+                    x-text="item.altDisplay"
+                  ></span>
                 </label>
               </li>
             </template>
