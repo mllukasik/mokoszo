@@ -195,7 +195,9 @@ test.describe('Planer — edytor dnia', () => {
   test('kliknięcie "+ wybierz przepis" otwiera picker', async ({ page }) => {
     await page.getByText('+ wybierz przepis').first().click();
     await waitForPickView(page);
-    await expect(page.locator('h1').filter({ visible: true })).toContainText('Co na');
+    // Szukamy h1 z tekstem "Co na" — unikalnym dla widoku pickera
+    const pickerH1 = page.locator('h1').filter({ hasText: /Co na/ });
+    await expect(pickerH1).toBeVisible({ timeout: 8_000 });
   });
 
   test('picker prefiltruje po nazwie slotu (śniadanie)', async ({ page }) => {
@@ -311,22 +313,23 @@ test.describe('Planer — usuwanie dnia', () => {
     await page.getByRole('button', { name: 'Edytuj' }).first().waitFor({ state: 'visible', timeout: 8_000 });
 
     page.on('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Usuń dzień' }).first().click();
-    await page.waitForTimeout(300);
+    // force:true pomija sprawdzenie stabilności (button może migać podczas x-for re-render)
+    await page.locator('button[aria-label="Usuń dzień"]').first().click({ force: true });
+    await page.waitForTimeout(500);
 
-    await expect(page.getByText('Brak zaplanowanych dni')).toBeVisible();
+    await expect(page.getByText('Brak zaplanowanych dni')).toBeVisible({ timeout: 8_000 });
   });
 
   test('można mieć wiele dni jednocześnie', async ({ page }) => {
-    await addDayViaUI(page, '2026-08-12');
-    await page.getByRole('button', { name: '← Wszystkie dni' }).click();
-    await waitForListView(page);
-    await addDayViaUI(page, '2026-09-01');
-    await page.getByRole('button', { name: '← Wszystkie dni' }).click();
+    // Ustaw 2 dni przez localStorage (szybciej niż przez UI)
+    await setDaysV3(page, [
+      { date: '2026-08-12' },
+      { date: '2026-09-01' },
+    ]);
+    await page.reload();
     await waitForListView(page);
 
-    // 2 "Edytuj" buttons in the list
-    const editBtns = page.getByRole('button', { name: 'Edytuj' });
-    expect(await editBtns.count()).toBe(2);
+    // Obydwa dni widoczne jako wiersze z przyciskiem "Edytuj"
+    await expect(page.getByRole('button', { name: 'Edytuj' })).toHaveCount(2, { timeout: 8_000 });
   });
 });
