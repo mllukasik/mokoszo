@@ -199,6 +199,20 @@
     fat: 0.008
     carbs: 0.063
 
+- id: salata
+  displayName: Sałata (główka)
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: warzywa
+  nutritionPerUnit:
+    calories: 40
+    protein: 2.5
+    fat: 0.5
+    carbs: 7.5
+
 - id: cebula-czerwona
   displayName: Cebula czerwona
   unit:
@@ -214,6 +228,20 @@
     carbs: 9.3
 
 # --- OWOCE ---
+
+- id: cytryna
+  displayName: Cytryna
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: owoce
+  nutritionPerUnit:
+    calories: 29
+    protein: 1.1
+    fat: 0.3
+    carbs: 9.3
 
 - id: sliwki
   displayName: Śliwki
@@ -244,6 +272,20 @@
     carbs: 23.0
 
 # --- NABIAŁ ---
+
+- id: jogurt-grecki
+  displayName: Jogurt grecki
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: nabiał
+  nutritionPerUnit:
+    calories: 0.59
+    protein: 0.10
+    fat: 0.004
+    carbs: 0.036
 
 - id: jajko
   displayName: Jajko
@@ -367,6 +409,20 @@
 
 # --- ZBOŻA ---
 
+- id: pita
+  displayName: Pita
+  unit:
+    name: sztuka
+    symbol: szt
+  formatting:
+    decimalPlaces: 0
+  category: zboża
+  nutritionPerUnit:
+    calories: 165
+    protein: 5.5
+    fat: 0.7
+    carbs: 33.0
+
 - id: platki-owsiane
   displayName: Płatki owsiane
   unit:
@@ -441,6 +497,91 @@
     carbs: 0.49
 
 # --- PRZYPRAWY ---
+
+- id: kmin-rzymski
+  displayName: Kmin rzymski (mielony)
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 3.75
+    protein: 0.18
+    fat: 0.22
+    carbs: 0.44
+  alternativeUnit:
+    perUnit: 3
+    symbol: łyżeczka
+
+- id: kolendra-mielona
+  displayName: Kolendra (mielona)
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 2.98
+    protein: 0.125
+    fat: 0.179
+    carbs: 0.549
+  alternativeUnit:
+    perUnit: 3
+    symbol: łyżeczka
+
+- id: papryka-wedzona
+  displayName: Papryka wędzona
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 2.82
+    protein: 0.14
+    fat: 0.13
+    carbs: 0.54
+  alternativeUnit:
+    perUnit: 3
+    symbol: łyżeczka
+
+- id: czosnek-granulowany
+  displayName: Czosnek granulowany
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 3.31
+    protein: 0.167
+    fat: 0.06
+    carbs: 0.726
+  alternativeUnit:
+    perUnit: 3
+    symbol: łyżeczka
+
+- id: chilli-mielone
+  displayName: Chilli (mielone)
+  unit:
+    name: gram
+    symbol: g
+  formatting:
+    decimalPlaces: 0
+  category: przyprawy
+  nutritionPerUnit:
+    calories: 3.18
+    protein: 0.12
+    fat: 0.14
+    carbs: 0.57
+  alternativeUnit:
+    perUnit: 3
+    symbol: łyżeczka
 
 - id: sol
   displayName: Sól
