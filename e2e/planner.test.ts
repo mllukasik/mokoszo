@@ -49,6 +49,23 @@ async function waitForListView(page: Page) {
   );
 }
 
+/**
+ * Czeka aż Alpine wyrenderuje x-for i co najmniej jeden "Edytuj" jest widoczny.
+ * Używać po powrocie do listy gdy wiemy, że jest co najmniej 1 dzień.
+ */
+async function waitForEditButton(page: Page) {
+  await page.waitForFunction(
+    () => {
+      const btn = Array.from(document.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Edytuj' &&
+               window.getComputedStyle(b as HTMLElement).display !== 'none'
+      );
+      return !!btn;
+    },
+    { timeout: 10_000 }
+  );
+}
+
 /** Czeka aż widok edytora jest aktywny ("← Wszystkie dni" widoczny). */
 async function waitForEditView(page: Page) {
   await page.waitForFunction(
@@ -171,8 +188,9 @@ test.describe('Planer — dodawanie dnia', () => {
     await addDayViaUI(page, '2026-08-12');
     await page.getByRole('button', { name: '← Wszystkie dni' }).click();
     await waitForListView(page);
-    // Day row exists — x-for może potrzebować chwili na render
-    await expect(page.getByRole('button', { name: 'Edytuj' }).first()).toBeVisible({ timeout: 8_000 });
+    // Czekamy aż x-for wyrenderuje wiersz z przyciskiem "Edytuj"
+    await waitForEditButton(page);
+    await expect(page.getByRole('button', { name: 'Edytuj' }).first()).toBeVisible();
   });
 
   test('link "Idź do listy zakupów" widoczny gdy są dni', async ({ page }) => {
@@ -283,6 +301,7 @@ test.describe('Planer — edytor dnia', () => {
 
     await page.reload();
     await waitForListView(page);
+    await waitForEditButton(page);
 
     // Otwórz dzień przez "Edytuj"
     await page.getByRole('button', { name: 'Edytuj' }).first().click();
@@ -306,16 +325,17 @@ test.describe('Planer — usuwanie dnia', () => {
   });
 
   test('można usunąć dzień z listy', async ({ page }) => {
-    await addDayViaUI(page, '2026-08-12');
-    await page.getByRole('button', { name: '← Wszystkie dni' }).click();
+    // Ustaw dzień przez localStorage — unikamy przechodzenia przez widok edytora
+    await setDaysV3(page, [{ date: '2026-08-12' }]);
+    await page.reload();
     await waitForListView(page);
-    // Poczekaj aż x-for renderuje wiersz dnia
-    await page.getByRole('button', { name: 'Edytuj' }).first().waitFor({ state: 'visible', timeout: 8_000 });
 
-    page.on('dialog', (dialog) => dialog.accept());
-    // force:true pomija sprawdzenie stabilności (button może migać podczas x-for re-render)
-    await page.locator('button[aria-label="Usuń dzień"]').first().click({ force: true });
-    await page.waitForTimeout(500);
+    // Poczekaj aż x-for renderuje wiersz ze stabilnym przyciskiem
+    const deleteBtn = page.locator('button[aria-label="Usuń dzień"]').first();
+    await deleteBtn.waitFor({ state: 'visible', timeout: 8_000 });
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await deleteBtn.click();
 
     await expect(page.getByText('Brak zaplanowanych dni')).toBeVisible({ timeout: 8_000 });
   });
