@@ -26,6 +26,12 @@ export type IngredientCategory =
   | 'oleje'
   | 'konserwy';
 
+export interface AlternativeUnit {
+  /** Ile głównych jednostek = 1 alternatywna jednostka. Np. 5 (g) = 1 łyżeczka → perUnit: 5 */
+  perUnit: number;
+  symbol: string; // np. "łyżeczka", "szklanka", "kostka"
+}
+
 export interface Ingredient {
   id: string;
   displayName: string;
@@ -33,6 +39,7 @@ export interface Ingredient {
   formatting: IngredientFormatting;
   category: IngredientCategory;
   nutritionPerUnit: NutritionValues;
+  alternativeUnit?: AlternativeUnit;
 }
 
 // ─── Recipe ────────────────────────────────────────────────────────────────────

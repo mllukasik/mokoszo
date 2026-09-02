@@ -272,6 +272,9 @@
     protein: 0.033
     fat: 0.032
     carbs: 0.047
+  alternativeUnit:
+    perUnit: 240
+    symbol: szklanka
 
 - id: masło
   displayName: Masło
@@ -286,6 +289,9 @@
     protein: 0.009
     fat: 0.081
     carbs: 0.001
+  alternativeUnit:
+    perUnit: 200
+    symbol: kostka
 
 - id: smietana-30
   displayName: Śmietana 30%
@@ -388,6 +394,9 @@
     protein: 0.1
     fat: 0.01
     carbs: 0.76
+  alternativeUnit:
+    perUnit: 130
+    symbol: szklanka
 
 - id: makaron-spaghetti
   displayName: Makaron spaghetti
@@ -530,6 +539,9 @@
     protein: 0
     fat: 0
     carbs: 0.28
+  alternativeUnit:
+    perUnit: 5
+    symbol: łyżeczka
 
 - id: cukier-wanilinowy
   displayName: Cukier wanilinowy
@@ -544,6 +556,9 @@
     protein: 0
     fat: 0
     carbs: 1.0
+  alternativeUnit:
+    perUnit: 16
+    symbol: saszetka
 
 - id: cukier
   displayName: Cukier
@@ -558,6 +573,9 @@
     protein: 0
     fat: 0
     carbs: 1.0
+  alternativeUnit:
+    perUnit: 200
+    symbol: szklanka
 
 - id: miód
   displayName: Miód
@@ -588,6 +606,9 @@
     protein: 0
     fat: 1.0
     carbs: 0
+  alternativeUnit:
+    perUnit: 15
+    symbol: łyżka
 
 # --- KONSERWY ---
 

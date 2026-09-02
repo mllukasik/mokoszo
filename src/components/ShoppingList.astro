@@ -48,12 +48,32 @@
                     x-bind:class="checked[item.ingredientId] ? 'line-through text-gray-400' : ''"
                     x-text="item.displayName"
                   ></span>
-                  <!-- Ilość -->
+                  <!-- Ilość + opcjonalny tooltip z alternatywną jednostką -->
                   <span
-                    class="flex-shrink-0 text-base font-medium text-gray-600 transition-colors"
-                    x-bind:class="checked[item.ingredientId] ? 'text-gray-300' : ''"
-                    x-text="item.quantity + ' ' + item.unit"
-                  ></span>
+                    class="relative flex-shrink-0"
+                    x-data="{ tip: false, _t: null }"
+                    x-bind:class="item.altDisplay ? 'cursor-help' : ''"
+                    @mouseenter="item.altDisplay && (tip = true)"
+                    @mouseleave="tip = false"
+                    @touchstart.passive="item.altDisplay && (_t = setTimeout(() => tip = true, 500))"
+                    @touchend.passive="clearTimeout(_t)"
+                    @touchmove.passive="clearTimeout(_t)"
+                  >
+                    <span
+                      class="text-base font-medium text-gray-600 transition-colors"
+                      x-bind:class="[
+                        checked[item.ingredientId] ? 'text-gray-300' : '',
+                        item.altDisplay ? 'underline decoration-dotted decoration-gray-400' : ''
+                      ]"
+                      x-text="item.quantity + ' ' + item.unit"
+                    ></span>
+                    <span
+                      x-show="tip"
+                      x-transition
+                      class="pointer-events-none absolute right-0 bottom-full z-10 mb-1 rounded bg-gray-800 px-2 py-0.5 text-xs whitespace-nowrap text-white"
+                      x-text="item.altDisplay"
+                    ></span>
+                  </span>
                 </label>
               </li>
             </template>

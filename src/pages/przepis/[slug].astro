@@ -22,6 +22,27 @@ const { title, servings, prepTimeMinutes, tags, ingredients: recipeIngredients, 
 const allIngredients = getIngredients();
 const ingredientMap = new Map(allIngredients.map((i) => [i.id, i]));
 
+/** Pomocnik: formatuje wartość alternatywnej jednostki (np. "≈ 3 szklanki") */
+function fmtAlt(quantity: string, perUnit: number, symbol: string): string {
+  const val = new Decimal(quantity).dividedBy(perUnit);
+  const str = val.isInteger() ? val.toFixed(0) : val.toDecimalPlaces(1).toFixed(1);
+  return `≈ ${str} ${symbol}`;
+}
+
+const ingredientList = recipeIngredients.map((item) => {
+  const ingredient = ingredientMap.get(item.ingredientId);
+  if (!ingredient) return null;
+  const formatted = formatQuantity(
+    new Decimal(item.quantity),
+    ingredient.formatting.decimalPlaces,
+    ingredient.unit.symbol
+  );
+  const altDisplay = ingredient.alternativeUnit
+    ? fmtAlt(item.quantity, ingredient.alternativeUnit.perUnit, ingredient.alternativeUnit.symbol)
+    : null;
+  return { ingredient, formatted, altDisplay };
+}).filter((x): x is NonNullable<typeof x> => x !== null);
+
 const macros = calculateRecipeMacros(
   {
     id: entry.id,
@@ -82,21 +103,33 @@ const base = import.meta.env.BASE_URL;
       <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
         <h2 class="mb-3 text-base font-semibold text-gray-900">Składniki</h2>
         <ul class="space-y-2">
-          {recipeIngredients.map((item) => {
-            const ingredient = ingredientMap.get(item.ingredientId);
-            if (!ingredient) return null;
-            const formatted = formatQuantity(
-              new Decimal(item.quantity),
-              ingredient.formatting.decimalPlaces,
-              ingredient.unit.symbol
-            );
-            return (
-              <li class="flex items-baseline justify-between gap-2 text-sm">
-                <span class="text-gray-700">{ingredient.displayName}</span>
+          {ingredientList.map(({ ingredient, formatted, altDisplay }) => (
+            <li class="flex items-baseline justify-between gap-2 text-sm">
+              <span class="text-gray-700">{ingredient.displayName}</span>
+              {altDisplay ? (
+                <span
+                  class="relative shrink-0 cursor-help"
+                  x-data="{ tip: false, _t: null }"
+                  @mouseenter="tip = true"
+                  @mouseleave="tip = false"
+                  @touchstart.passive="_t = setTimeout(() => tip = true, 500)"
+                  @touchend.passive="clearTimeout(_t)"
+                  @touchmove.passive="clearTimeout(_t)"
+                >
+                  <span class="font-medium text-gray-900 underline decoration-dotted decoration-gray-400">
+                    {formatted}
+                  </span>
+                  <span
+                    x-show="tip"
+                    x-transition
+                    class="pointer-events-none absolute right-0 bottom-full z-10 mb-1 rounded bg-gray-800 px-2 py-0.5 text-xs whitespace-nowrap text-white"
+                  >{altDisplay}</span>
+                </span>
+              ) : (
                 <span class="shrink-0 font-medium text-gray-900">{formatted}</span>
-              </li>
-            );
-          })}
+              )}
+            </li>
+          ))}
         </ul>
       </div>
 

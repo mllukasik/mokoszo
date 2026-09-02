@@ -32,6 +32,7 @@ const ingredientsMap = Object.fromEntries(
       category: ing.category,
       decimalPlaces: ing.formatting.decimalPlaces,
       nutritionPerUnit: ing.nutritionPerUnit,
+      alternativeUnit: ing.alternativeUnit ?? null,
     },
   ])
 );
@@ -172,11 +173,20 @@ const categoryLabels: Record<string, string> = {
         const qty = dp === 0 ? String(Math.round(total)) : total.toFixed(dp);
         const cat = ing.category;
         if (!byCategory[cat]) byCategory[cat] = [];
+        let altDisplay = null;
+        if (ing.alternativeUnit) {
+          const { perUnit, symbol } = ing.alternativeUnit;
+          const altVal = total / perUnit;
+          const altRounded = Math.round(altVal * 10) / 10;
+          const altStr = altRounded % 1 === 0 ? String(Math.round(altRounded)) : altRounded.toFixed(1);
+          altDisplay = `≈ ${altStr} ${symbol}`;
+        }
         byCategory[cat].push({
           ingredientId,
           displayName: ing.displayName,
           quantity: qty,
           unit: ing.unitSymbol,
+          altDisplay,
         });
       }
 
