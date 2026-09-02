@@ -10,6 +10,7 @@ const recipesArr = allRecipes.map((r) => ({
   title: r.data.title,
   tags: r.data.tags,
   prepTimeMinutes: r.data.prepTimeMinutes,
+  image: r.data.image ?? null,
 }));
 
 const base = import.meta.env.BASE_URL;
@@ -18,264 +19,218 @@ const base = import.meta.env.BASE_URL;
 <Base title="Plan jadłospisu">
   <div x-data="plannerApp()" x-cloak>
 
-    <!-- ══ WIDOK: LISTA PLANÓW ══════════════════════════════════════════════ -->
+    <!-- ══ WIDOK: LISTA DNI ═══════════════════════════════════════════════════ -->
     <div x-show="view === 'list'">
 
       <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-3xl font-bold text-gray-900">Moje plany</h1>
+        <h1 class="text-3xl font-bold text-gray-900">Plan jadłospisu</h1>
         <button
           type="button"
-          @click="goCreate()"
+          @click="toggleAddDay()"
           class="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition"
         >
-          + Nowy plan
+          + Dodaj dzień
         </button>
+      </div>
+
+      <!-- Formularz: dodaj dzień -->
+      <div
+        x-show="addingDay"
+        x-transition
+        class="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-green-200 bg-green-50 p-4"
+      >
+        <div class="flex-1 min-w-[180px]">
+          <label class="mb-1 block text-sm font-medium text-gray-700" for="new-day-date">Data</label>
+          <input
+            id="new-day-date"
+            type="date"
+            x-model="newDayDate"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none"
+          />
+        </div>
+        <button
+          type="button"
+          @click="addDay()"
+          x-bind:disabled="!newDayDate"
+          x-bind:class="newDayDate ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-300 cursor-not-allowed'"
+          class="min-h-[44px] rounded-xl px-6 text-sm font-semibold text-white transition"
+        >
+          Dodaj
+        </button>
+        <button
+          type="button"
+          @click="addingDay = false"
+          class="min-h-[44px] rounded-xl border border-gray-300 px-4 text-sm text-gray-600 hover:bg-gray-100 transition"
+        >
+          Anuluj
+        </button>
+        <p x-show="dayExists(newDayDate)" class="w-full text-xs text-amber-700">
+          Ten dzień już istnieje — zostanie otwarty do edycji.
+        </p>
       </div>
 
       <!-- Stan pusty -->
-      <div x-show="plans.length === 0" class="flex flex-col items-center py-20 text-center">
+      <div x-show="sortedDays.length === 0" class="flex flex-col items-center py-20 text-center">
         <p class="mb-3 text-5xl">📅</p>
-        <p class="mb-1 text-xl font-semibold text-gray-800">Brak planów</p>
-        <p class="mb-6 text-sm text-gray-500">Utwórz swój pierwszy plan jadłospisu.</p>
+        <p class="mb-1 text-xl font-semibold text-gray-800">Brak zaplanowanych dni</p>
+        <p class="mb-6 text-sm text-gray-500">Dodaj pierwsze daty, żeby zacząć planować jadłospis.</p>
         <button
           type="button"
-          @click="goCreate()"
+          @click="toggleAddDay()"
           class="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition"
         >
-          Utwórz plan
+          + Dodaj dzień
         </button>
       </div>
 
-      <!-- Karty planów -->
-      <div x-show="plans.length > 0" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <template x-for="plan in plans" :key="plan.id">
-          <div class="flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p class="mb-0.5 text-lg font-semibold text-gray-900" x-text="planLabel(plan)"></p>
-            <p class="mb-4 text-sm text-gray-500" x-text="planStats(plan)"></p>
-            <div class="mt-auto flex flex-wrap gap-2">
+      <!-- Lista dni -->
+      <div x-show="sortedDays.length > 0" class="space-y-3">
+        <template x-for="day in sortedDays" :key="day.date">
+          <div class="flex min-h-[64px] items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+            <!-- Data + podsumowanie -->
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-gray-900" x-text="formatDate(day.date)"></p>
+              <p class="text-sm text-gray-500" x-text="dayStats(day)"></p>
+            </div>
+            <!-- Akcje -->
+            <div class="flex flex-shrink-0 gap-2">
               <button
                 type="button"
-                @click="goEdit(plan.id)"
-                class="min-h-[44px] rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                @click="goEdit(day.date)"
+                class="min-h-[40px] rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
               >
                 Edytuj
               </button>
               <button
                 type="button"
-                @click="goShopping(plan.id)"
-                x-bind:disabled="!planHasRecipes(plan)"
-                x-bind:class="planHasRecipes(plan)
-                  ? 'border-green-300 text-green-700 hover:bg-green-50'
-                  : 'border-gray-200 text-gray-400 cursor-not-allowed'"
-                class="min-h-[44px] rounded-lg border px-4 text-sm font-medium transition"
-              >
-                🛒 Lista zakupów
-              </button>
-              <button
-                type="button"
-                @click="deletePlan(plan.id)"
-                class="min-h-[44px] rounded-lg border border-red-200 px-4 text-sm font-medium text-red-600 hover:bg-red-50 transition"
-              >
-                Usuń
-              </button>
+                @click="deleteDay(day.date)"
+                class="min-h-[40px] min-w-[40px] rounded-lg border border-red-200 text-sm font-medium text-red-500 hover:bg-red-50 transition"
+                aria-label="Usuń dzień"
+              >✕</button>
             </div>
           </div>
         </template>
       </div>
-    </div>
 
-    <!-- ══ WIDOK: NOWY PLAN ═════════════════════════════════════════════════ -->
-    <div x-show="view === 'create'" style="display:none">
-
-      <div class="mb-6 flex items-center gap-4">
-        <button
-          type="button"
-          @click="goList()"
-          class="inline-flex min-h-[44px] items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition"
+      <!-- Link do listy zakupów gdy coś zaplanowane -->
+      <div x-show="sortedDays.length > 0" class="mt-8 text-center">
+        <a
+          :href="`${base}lista-zakupow/`"
+          class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-green-300 px-6 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-50 transition"
         >
-          ← Wróć
-        </button>
-        <h1 class="text-3xl font-bold text-gray-900">Nowy plan</h1>
-      </div>
-
-      <div class="max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div class="mb-4">
-          <label class="mb-1 block text-sm font-medium text-gray-700" for="plan-start">Od</label>
-          <input
-            id="plan-start"
-            type="date"
-            x-model="newStart"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none"
-          />
-        </div>
-        <div class="mb-4">
-          <label class="mb-1 block text-sm font-medium text-gray-700" for="plan-end">Do</label>
-          <input
-            id="plan-end"
-            type="date"
-            x-model="newEnd"
-            x-bind:min="newStart"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none"
-          />
-        </div>
-        <div
-          x-show="newStart && newEnd && newEnd < newStart"
-          class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
-        >
-          Data końcowa musi być po dacie początkowej.
-        </div>
-        <p x-show="dateRangeValid" class="mb-4 text-xs text-gray-500">
-          Plan obejmie <strong x-text="createDayCount"></strong> dni.
-        </p>
-        <button
-          type="button"
-          @click="createPlan()"
-          x-bind:disabled="!dateRangeValid"
-          x-bind:class="dateRangeValid
-            ? 'bg-green-600 hover:bg-green-700'
-            : 'bg-gray-300 cursor-not-allowed'"
-          class="w-full min-h-[44px] rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition"
-        >
-          Utwórz plan
-        </button>
+          🛒 Idź do listy zakupów
+        </a>
       </div>
     </div>
 
-    <!-- ══ WIDOK: EDYTOR PLANU ══════════════════════════════════════════════ -->
+    <!-- ══ WIDOK: EDYTOR DNIA ═════════════════════════════════════════════════ -->
     <div x-show="view === 'edit'" style="display:none">
 
-      <!-- Nagłówek edytora -->
+      <!-- Nagłówek -->
       <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
           @click="goList()"
           class="inline-flex min-h-[44px] items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-900 transition"
         >
-          ← Plany
+          ← Wszystkie dni
         </button>
         <h1
           class="text-xl font-bold text-gray-900"
-          x-text="editingPlan ? planLabel(editingPlan) : ''"
+          x-text="editingDay ? formatDate(editingDay.date) : ''"
         ></h1>
-        <button
-          type="button"
-          @click="goShopping(editingId)"
-          x-bind:disabled="!editingPlan || !planHasRecipes(editingPlan)"
-          x-bind:class="(editingPlan && planHasRecipes(editingPlan))
-            ? 'bg-green-600 text-white hover:bg-green-700'
-            : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
-          class="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition"
+        <a
+          :href="`${base}lista-zakupow/`"
+          class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-green-300 px-4 text-sm font-semibold text-green-700 hover:bg-green-50 transition"
         >
           🛒 Lista zakupów
+        </a>
+      </div>
+
+      <!-- Sloty posiłków -->
+      <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="space-y-2">
+          <template x-for="(slot, slotIdx) in (editingDay ? editingDay.slots : [])" :key="slot.id">
+            <div class="flex min-h-[56px] items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
+
+              <!-- Nazwa posiłku -->
+              <div class="w-24 flex-shrink-0">
+                <span
+                  class="text-sm font-medium text-gray-500 capitalize"
+                  x-show="!slot.isCustom"
+                  x-text="slot.name"
+                ></span>
+                <input
+                  x-show="slot.isCustom"
+                  x-model="slot.name"
+                  @blur="_save()"
+                  placeholder="Nazwa…"
+                  class="w-full bg-transparent text-sm font-medium text-gray-500 placeholder-gray-300 focus:outline-none border-b border-dashed border-gray-300"
+                />
+              </div>
+
+              <!-- Wybrany przepis lub przycisk wyboru -->
+              <div class="flex min-w-0 flex-1 items-center gap-2">
+                <template x-if="slot.recipeId">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-sm font-medium text-gray-900" x-text="recipeTitle(slot.recipeId)"></span>
+                    <button
+                      type="button"
+                      @click="goPickRecipe(slotIdx)"
+                      class="inline-flex min-h-[28px] items-center rounded-md px-2 py-0.5 text-xs font-medium text-gray-400 hover:text-green-700 hover:bg-green-50 transition"
+                    >zmień</button>
+                    <button
+                      type="button"
+                      @click="clearRecipe(slotIdx)"
+                      class="inline-flex min-h-[28px] min-w-[28px] items-center justify-center text-gray-300 hover:text-red-400 text-lg leading-none transition"
+                      aria-label="Usuń przepis"
+                    >✕</button>
+                  </div>
+                </template>
+                <template x-if="!slot.recipeId">
+                  <button
+                    type="button"
+                    @click="goPickRecipe(slotIdx)"
+                    class="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 text-sm text-gray-400 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition"
+                  >
+                    <span class="text-base leading-none">+</span> wybierz przepis
+                  </button>
+                </template>
+              </div>
+
+              <!-- Usuń własny slot -->
+              <button
+                x-show="slot.isCustom"
+                type="button"
+                @click="removeSlot(slotIdx)"
+                class="flex-shrink-0 inline-flex min-h-[36px] items-center text-xs font-medium text-red-300 hover:text-red-500 transition"
+              >Usuń</button>
+            </div>
+          </template>
+        </div>
+
+        <!-- Dodaj posiłek -->
+        <button
+          type="button"
+          @click="addSlot()"
+          class="mt-3 min-h-[44px] w-full rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 hover:border-green-400 hover:text-green-700 transition"
+        >
+          + Dodaj posiłek
         </button>
       </div>
-
-      <!-- Dni -->
-      <div class="space-y-4">
-        <template x-for="(day, dayIdx) in (editingPlan ? editingPlan.days : [])" :key="day.date">
-          <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-
-            <!-- Nagłówek dnia -->
-            <h2
-              class="mb-3 text-base font-semibold text-gray-900"
-              x-text="formatDate(day.date)"
-            ></h2>
-
-            <!-- Sloty posiłków -->
-            <div class="space-y-2">
-              <template x-for="(slot, slotIdx) in day.slots" :key="slot.id">
-                <div class="flex min-h-[56px] items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
-
-                  <!-- Nazwa posiłku -->
-                  <div class="w-24 flex-shrink-0">
-                    <span
-                      class="text-sm font-medium text-gray-500 capitalize"
-                      x-show="!slot.isCustom"
-                      x-text="slot.name"
-                    ></span>
-                    <input
-                      x-show="slot.isCustom"
-                      x-model="slot.name"
-                      @blur="_save()"
-                      placeholder="Nazwa…"
-                      class="w-full bg-transparent text-sm font-medium text-gray-500 placeholder-gray-300 focus:outline-none border-b border-dashed border-gray-300"
-                    />
-                  </div>
-
-                  <!-- Wybrany przepis lub przycisk wyboru -->
-                  <div class="flex min-w-0 flex-1 items-center gap-2">
-
-                    <!-- Wybrany przepis -->
-                    <template x-if="slot.recipeId">
-                      <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-sm font-medium text-gray-900" x-text="recipeTitle(slot.recipeId)"></span>
-                        <button
-                          type="button"
-                          @click="goPickRecipe(dayIdx, slotIdx)"
-                          class="inline-flex min-h-[28px] items-center rounded-md px-2 py-0.5 text-xs font-medium text-gray-400 hover:text-green-700 hover:bg-green-50 transition"
-                        >zmień</button>
-                        <button
-                          type="button"
-                          @click="clearRecipe(dayIdx, slotIdx)"
-                          class="inline-flex min-h-[28px] min-w-[28px] items-center justify-center text-gray-300 hover:text-red-400 text-lg leading-none transition"
-                          aria-label="Usuń przepis"
-                        >✕</button>
-                      </div>
-                    </template>
-
-                    <!-- Brak przepisu: przycisk wybierz -->
-                    <template x-if="!slot.recipeId">
-                      <button
-                        type="button"
-                        @click="goPickRecipe(dayIdx, slotIdx)"
-                        class="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 text-sm text-gray-400 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition"
-                      >
-                        <span class="text-base leading-none">+</span> wybierz przepis
-                      </button>
-                    </template>
-
-                  </div>
-
-                  <!-- Usuń własny slot -->
-                  <button
-                    x-show="slot.isCustom"
-                    type="button"
-                    @click="removeSlot(dayIdx, slotIdx)"
-                    class="flex-shrink-0 inline-flex min-h-[36px] items-center text-xs font-medium text-red-300 hover:text-red-500 transition"
-                    aria-label="Usuń posiłek"
-                  >
-                    Usuń
-                  </button>
-
-                </div>
-              </template>
-            </div>
-
-            <!-- Dodaj posiłek -->
-            <button
-              type="button"
-              @click="addSlot(dayIdx)"
-              class="mt-3 min-h-[44px] w-full rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 hover:border-green-400 hover:text-green-700 transition"
-            >
-              + Dodaj posiłek
-            </button>
-          </div>
-        </template>
-      </div>
-
     </div>
 
-    <!-- ══ WIDOK: WYBÓR PRZEPISU (menu restauracyjne) ══════════════════════ -->
+    <!-- ══ WIDOK: PICKER (Tinder-like) ════════════════════════════════════════ -->
     <div x-show="view === 'pick'" style="display:none">
 
-      <!-- Nagłówek pickera -->
+      <!-- Nagłówek -->
       <div class="mb-5 flex flex-wrap items-center gap-3">
         <button
           type="button"
           @click="view = 'edit'; pickingCtx = null"
           class="inline-flex min-h-[44px] items-center text-sm font-medium text-gray-500 hover:text-gray-900 transition"
         >
-          ← Wróć do planu
+          ← Wróć do dnia
         </button>
         <div class="flex-1">
           <h1 class="text-2xl font-bold text-gray-900">
@@ -289,18 +244,16 @@ const base = import.meta.env.BASE_URL;
       <div class="mb-5 flex flex-wrap gap-2">
         <button
           type="button"
-          @click="pickFilter = ''"
+          @click="setPickFilter('')"
           x-bind:class="pickFilter === ''
             ? 'bg-gray-800 text-white border-gray-800'
             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-500'"
           class="min-h-[36px] rounded-full border px-4 text-sm font-medium transition"
-        >
-          Wszystkie
-        </button>
+        >Wszystkie</button>
         <template x-for="tag in allTags" :key="tag">
           <button
             type="button"
-            @click="pickFilter = pickFilter === tag ? '' : tag"
+            @click="setPickFilter(pickFilter === tag ? '' : tag)"
             x-bind:class="pickFilter === tag
               ? 'bg-gray-800 text-white border-gray-800'
               : 'bg-white border-gray-300 text-gray-700 hover:border-gray-500'"
@@ -310,49 +263,99 @@ const base = import.meta.env.BASE_URL;
         </template>
       </div>
 
-      <!-- Siatka kart przepisów -->
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <template x-for="r in filteredRecipes" :key="r.id">
+      <!-- Tinder card -->
+      <div x-show="filteredRecipes.length > 0" class="flex flex-col items-center">
+
+        <!-- Karta przepisu -->
+        <div
+          class="relative w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg"
+          x-show="pickerRecipe"
+        >
+          <!-- Podgląd ↗ link -->
+          <a
+            :href="pickerRecipe ? `${base}przepis/${pickerRecipe.id}/` : '#'"
+            target="_blank"
+            rel="noopener"
+            class="absolute top-3 right-3 z-10 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-gray-600 shadow backdrop-blur-sm hover:bg-white transition"
+          >
+            Podgląd ↗
+          </a>
+
+          <!-- Zdjęcie lub kolorowe tło z emoji -->
+          <template x-if="pickerRecipe && pickerRecipe.image">
+            <img
+              :src="`${base}${pickerRecipe.image}`"
+              :alt="pickerRecipe.title"
+              class="h-56 w-full object-cover"
+            />
+          </template>
+          <template x-if="pickerRecipe && !pickerRecipe.image">
+            <div
+              class="flex h-56 items-center justify-center text-7xl"
+              x-bind:class="tagBg(pickerRecipe.tags)"
+            >
+              <span x-text="tagEmoji(pickerRecipe.tags)"></span>
+            </div>
+          </template>
+
+          <!-- Checkmark gdy już wybrany w tym slocie -->
+          <div
+            x-show="isCurrentRecipe(pickerRecipe?.id)"
+            class="absolute top-3 left-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white text-sm font-bold shadow-md"
+          >✓</div>
+
+          <!-- Treść karty -->
+          <div class="p-5">
+            <h3 class="mb-2 text-xl font-bold text-gray-900 leading-snug" x-text="pickerRecipe?.title"></h3>
+            <div class="mb-3 flex flex-wrap gap-1.5">
+              <template x-for="tag in (pickerRecipe?.tags ?? [])" :key="tag">
+                <span
+                  class="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                  x-bind:class="tagPillColor(tag)"
+                  x-text="tag"
+                ></span>
+              </template>
+            </div>
+            <p class="text-sm text-gray-400">⏱ <span x-text="(pickerRecipe?.prepTimeMinutes ?? '') + ' min'"></span></p>
+          </div>
+        </div>
+
+        <!-- Licznik -->
+        <p class="my-4 text-sm text-gray-400">
+          <span x-text="pickerIdx + 1"></span> z <span x-text="filteredRecipes.length"></span>
+        </p>
+
+        <!-- Nawigacja -->
+        <div class="flex w-full max-w-sm items-center justify-between gap-3">
           <button
             type="button"
-            @click="pickRecipe(r.id)"
-            x-bind:class="isCurrentRecipe(r.id)
-              ? 'ring-2 ring-green-500 ring-offset-2 shadow-md'
-              : 'hover:shadow-lg hover:border-green-200'"
-            class="group relative text-left rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm transition-all duration-200 active:scale-[0.98]"
+            @click="prevRecipe()"
+            x-bind:disabled="pickerIdx === 0"
+            x-bind:class="pickerIdx === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'"
+            class="min-h-[52px] min-w-[52px] rounded-2xl border border-gray-300 text-xl transition"
+            aria-label="Poprzedni przepis"
+          >←</button>
+
+          <button
+            type="button"
+            @click="pickRecipe(pickerRecipe?.id)"
+            x-bind:class="isCurrentRecipe(pickerRecipe?.id)
+              ? 'bg-green-700 ring-2 ring-green-300'
+              : 'bg-green-600 hover:bg-green-700'"
+            class="flex-1 min-h-[52px] rounded-2xl text-base font-bold text-white shadow-md transition active:scale-[0.97]"
           >
-            <!-- Kolorowy nagłówek karty z emoji -->
-            <div
-              class="flex h-28 items-center justify-center text-5xl"
-              x-bind:class="tagBg(r.tags)"
-            >
-              <span x-text="tagEmoji(r.tags)"></span>
-            </div>
-
-            <!-- Checkmark gdy wybrany -->
-            <div
-              x-show="isCurrentRecipe(r.id)"
-              class="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white text-sm font-bold shadow-md"
-            >✓</div>
-
-            <!-- Treść karty -->
-            <div class="p-4">
-              <h3 class="mb-2 text-base font-semibold text-gray-900 leading-snug" x-text="r.title"></h3>
-              <div class="mb-3 flex flex-wrap gap-1">
-                <template x-for="tag in r.tags" :key="tag">
-                  <span
-                    class="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-                    x-bind:class="tagPillColor(tag)"
-                    x-text="tag"
-                  ></span>
-                </template>
-              </div>
-              <p class="text-xs text-gray-400">
-                ⏱ <span x-text="r.prepTimeMinutes + ' min'"></span>
-              </p>
-            </div>
+            <span x-text="isCurrentRecipe(pickerRecipe?.id) ? '✓ Wybrano' : '+ Dodaj'"></span>
           </button>
-        </template>
+
+          <button
+            type="button"
+            @click="nextRecipe()"
+            x-bind:disabled="pickerIdx >= filteredRecipes.length - 1"
+            x-bind:class="pickerIdx >= filteredRecipes.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'"
+            class="min-h-[52px] min-w-[52px] rounded-2xl border border-gray-300 text-xl transition"
+            aria-label="Następny przepis"
+          >→</button>
+        </div>
       </div>
 
       <!-- Stan pusty filtrowania -->
@@ -363,39 +366,55 @@ const base = import.meta.env.BASE_URL;
         Brak przepisów dla wybranego filtra.
         <button
           type="button"
-          @click="pickFilter = ''"
+          @click="setPickFilter('')"
           class="ml-1 underline hover:text-gray-700"
         >Pokaż wszystkie.</button>
       </div>
-
     </div>
+
   </div>
 </Base>
 
 <script is:inline define:vars={{ recipesArr, base }}>
-  const PLANS_KEY = 'mokoszo:plans:v2';
+  const DAYS_KEY  = 'mokoszo:days:v3';
+  const PLANS_KEY = 'mokoszo:plans:v2'; // legacy — only for migration
 
-  // ── Storage helpers ────────────────────────────────────────────────────────
-  function loadStorage() {
+  // ── Storage ────────────────────────────────────────────────────────────────
+  function loadDays() {
+    // 1. Try v3
+    try {
+      const raw = localStorage.getItem(DAYS_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p.version === 3 && Array.isArray(p.days)) return p.days;
+      }
+    } catch {}
+
+    // 2. Migrate from v2 (flatten all days from all plans)
     try {
       const raw = localStorage.getItem(PLANS_KEY);
-      if (!raw) return { version: 2, plans: [], activeForShopping: null };
-      const p = JSON.parse(raw);
-      if (p.version !== 2 || !Array.isArray(p.plans)) {
-        return { version: 2, plans: [], activeForShopping: null };
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p.version === 2 && Array.isArray(p.plans)) {
+          const byDate = new Map();
+          for (const plan of p.plans) {
+            for (const day of (plan.days ?? [])) {
+              if (!byDate.has(day.date)) byDate.set(day.date, day);
+            }
+          }
+          const days = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+          saveDays(days);
+          return days;
+        }
       }
-      return p;
-    } catch {
-      return { version: 2, plans: [], activeForShopping: null };
-    }
+    } catch {}
+
+    return [];
   }
 
-  function persistStorage(plans, activeForShopping) {
+  function saveDays(days) {
     try {
-      localStorage.setItem(
-        PLANS_KEY,
-        JSON.stringify({ version: 2, plans, activeForShopping })
-      );
+      localStorage.setItem(DAYS_KEY, JSON.stringify({ version: 3, days }));
     } catch {}
   }
 
@@ -408,23 +427,6 @@ const base = import.meta.env.BASE_URL;
     return new Date().toISOString().split('T')[0];
   }
 
-  function addDaysToISO(iso, n) {
-    const d = new Date(iso + 'T12:00:00');
-    d.setDate(d.getDate() + n);
-    return d.toISOString().split('T')[0];
-  }
-
-  function daysInRange(start, end) {
-    const result = [];
-    const cur = new Date(start + 'T12:00:00');
-    const endDate = new Date(end + 'T12:00:00');
-    while (cur <= endDate && result.length < 31) {
-      result.push(cur.toISOString().split('T')[0]);
-      cur.setDate(cur.getDate() + 1);
-    }
-    return result;
-  }
-
   function makeSlots() {
     return [
       { id: uid(), name: 'śniadanie', recipeId: null, isCustom: false },
@@ -433,65 +435,54 @@ const base = import.meta.env.BASE_URL;
     ];
   }
 
-  function fmtShort(iso) {
-    return new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'short' })
-      .format(new Date(iso + 'T12:00:00'));
+  function fmtDate(iso) {
+    const s = new Intl.DateTimeFormat('pl-PL', {
+      weekday: 'long', day: 'numeric', month: 'long',
+    }).format(new Date(iso + 'T12:00:00'));
+    return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
   // ── Tag → emoji / color ────────────────────────────────────────────────────
   const TAG_EMOJI = {
-    śniadanie:      '🥞',
-    obiad:          '🍽️',
-    kolacja:        '🌙',
-    deser:          '🍰',
-    zupa:           '🍲',
-    makaron:        '🍝',
-    sałatka:        '🥗',
-    wegetariańskie: '🥦',
+    śniadanie: '🥞', obiad: '🍽️', kolacja: '🌙', deser: '🍰',
+    zupa: '🍲', makaron: '🍝', sałatka: '🥗', wegetariańskie: '🥦',
   };
-
   const TAG_BG = {
-    śniadanie:      'bg-amber-50',
-    obiad:          'bg-blue-50',
-    kolacja:        'bg-indigo-50',
-    deser:          'bg-pink-50',
-    zupa:           'bg-orange-50',
-    makaron:        'bg-yellow-50',
-    sałatka:        'bg-green-50',
-    wegetariańskie: 'bg-emerald-50',
+    śniadanie: 'bg-amber-50', obiad: 'bg-blue-50', kolacja: 'bg-indigo-50',
+    deser: 'bg-pink-50', zupa: 'bg-orange-50', makaron: 'bg-yellow-50',
+    sałatka: 'bg-green-50', wegetariańskie: 'bg-emerald-50',
   };
-
   const TAG_PILL = {
-    śniadanie:      'bg-amber-100 text-amber-700',
-    obiad:          'bg-blue-100 text-blue-700',
-    kolacja:        'bg-indigo-100 text-indigo-700',
-    deser:          'bg-pink-100 text-pink-700',
-    zupa:           'bg-orange-100 text-orange-700',
-    makaron:        'bg-yellow-100 text-yellow-700',
-    sałatka:        'bg-green-100 text-green-700',
-    wegetariańskie: 'bg-emerald-100 text-emerald-700',
+    śniadanie: 'bg-amber-100 text-amber-700', obiad: 'bg-blue-100 text-blue-700',
+    kolacja: 'bg-indigo-100 text-indigo-700', deser: 'bg-pink-100 text-pink-700',
+    zupa: 'bg-orange-100 text-orange-700', makaron: 'bg-yellow-100 text-yellow-700',
+    sałatka: 'bg-green-100 text-green-700', wegetariańskie: 'bg-emerald-100 text-emerald-700',
   };
 
   // ── Alpine component ───────────────────────────────────────────────────────
   window.plannerApp = function plannerApp() {
     return {
-      view: 'list',            // 'list' | 'create' | 'edit' | 'pick'
-      plans: [],
-      activeForShopping: null,
-      editingId: null,
-      newStart: todayISO(),
-      newEnd: addDaysToISO(todayISO(), 6),
-      pickingCtx: null,        // { dayIdx, slotIdx, dayDate, slotName }
-      pickFilter: '',          // aktywny filtr tagu w widoku pick
+      view:        'list',
+      days:        [],        // MealPlanDay[] — flat list
+      addingDay:   false,
+      newDayDate:  todayISO(),
+      editingDate: null,      // date string of day being edited
+      pickingCtx:  null,      // { slotIdx, dayDate, slotName }
+      pickFilter:  '',
+      pickerIdx:   0,
 
-      // ── Computed ────────────────────────────────────────────────────────
-      get allRecipes() { return recipesArr; },
+      // ── Computed ──────────────────────────────────────────────────────────
+      get sortedDays() {
+        return [...this.days].sort((a, b) => a.date.localeCompare(b.date));
+      },
+
+      get editingDay() {
+        return this.days.find((d) => d.date === this.editingDate) ?? null;
+      },
 
       get allTags() {
         const tags = new Set();
-        for (const r of recipesArr) {
-          for (const tag of (r.tags ?? [])) tags.add(tag);
-        }
+        for (const r of recipesArr) for (const t of (r.tags ?? [])) tags.add(t);
         return [...tags];
       },
 
@@ -500,187 +491,147 @@ const base = import.meta.env.BASE_URL;
         return recipesArr.filter((r) => (r.tags ?? []).includes(this.pickFilter));
       },
 
-      get editingPlan() {
-        return this.plans.find((p) => p.id === this.editingId) ?? null;
+      get pickerRecipe() {
+        return this.filteredRecipes[this.pickerIdx] ?? null;
       },
 
-      get dateRangeValid() {
-        return !!(this.newStart && this.newEnd && this.newEnd >= this.newStart);
+      // ── Helpers ───────────────────────────────────────────────────────────
+      formatDate: fmtDate,
+
+      dayStats(day) {
+        const total  = (day.slots ?? []).length;
+        const filled = (day.slots ?? []).filter((s) => s.recipeId).length;
+        return `${filled}/${total} posiłków`;
       },
 
-      get createDayCount() {
-        if (!this.dateRangeValid) return 0;
-        return daysInRange(this.newStart, this.newEnd).length;
-      },
-
-      // ── Helpers ─────────────────────────────────────────────────────────
-      planLabel(plan) {
-        const days = plan.days;
-        if (!days.length) return 'Pusty plan';
-        if (days.length === 1) return fmtShort(days[0].date);
-        return `${fmtShort(days[0].date)} – ${fmtShort(days[days.length - 1].date)}`;
-      },
-
-      planStats(plan) {
-        const n = plan.days.length;
-        const total = plan.days.reduce((s, d) => s + (d.slots?.length ?? 0), 0);
-        const filled = plan.days.reduce(
-          (s, d) => s + (d.slots ?? []).filter((sl) => sl.recipeId).length,
-          0
-        );
-        const dayLabel = n === 1 ? '1 dzień' : `${n} dni`;
-        return `${dayLabel} · ${filled}/${total} posiłków`;
-      },
-
-      planHasRecipes(plan) {
-        return plan.days.some((d) => (d.slots ?? []).some((s) => s.recipeId));
+      dayExists(date) {
+        return !!date && this.days.some((d) => d.date === date);
       },
 
       recipeTitle(id) {
         return recipesArr.find((r) => r.id === id)?.title ?? id;
       },
 
-      formatDate(iso) {
-        const s = new Intl.DateTimeFormat('pl-PL', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-        }).format(new Date(iso + 'T12:00:00'));
-        return s.charAt(0).toUpperCase() + s.slice(1);
-      },
-
       isCurrentRecipe(recipeId) {
-        if (!this.pickingCtx || !this.editingPlan) return false;
-        const { dayIdx, slotIdx } = this.pickingCtx;
-        return this.editingPlan.days[dayIdx]?.slots?.[slotIdx]?.recipeId === recipeId;
+        if (!this.pickingCtx || !this.editingDay) return false;
+        const { slotIdx } = this.pickingCtx;
+        return this.editingDay.slots?.[slotIdx]?.recipeId === recipeId;
       },
 
       tagEmoji(tags) {
-        for (const tag of (tags ?? [])) {
-          if (TAG_EMOJI[tag]) return TAG_EMOJI[tag];
-        }
+        for (const t of (tags ?? [])) if (TAG_EMOJI[t]) return TAG_EMOJI[t];
         return '🍴';
       },
-
       tagBg(tags) {
-        for (const tag of (tags ?? [])) {
-          if (TAG_BG[tag]) return TAG_BG[tag];
-        }
+        for (const t of (tags ?? [])) if (TAG_BG[t]) return TAG_BG[t];
         return 'bg-gray-50';
       },
-
       tagPillColor(tag) {
         return TAG_PILL[tag] ?? 'bg-gray-100 text-gray-600';
       },
 
-      // ── Navigation ──────────────────────────────────────────────────────
-      goCreate() {
-        this.view = 'create';
+      // ── Picker navigation ─────────────────────────────────────────────────
+      setPickFilter(tag) {
+        this.pickFilter = tag;
+        this.pickerIdx  = 0;
       },
 
+      nextRecipe() {
+        if (this.pickerIdx < this.filteredRecipes.length - 1) this.pickerIdx++;
+      },
+
+      prevRecipe() {
+        if (this.pickerIdx > 0) this.pickerIdx--;
+      },
+
+      // ── Navigation ────────────────────────────────────────────────────────
       goList() {
-        this.view = 'list';
-        this.editingId = null;
-        this.pickingCtx = null;
+        this.view        = 'list';
+        this.editingDate = null;
+        this.pickingCtx  = null;
+        this.addingDay   = false;
       },
 
-      goEdit(id) {
-        this.editingId = id;
-        this.view = 'edit';
-        this.pickingCtx = null;
+      goEdit(date) {
+        this.editingDate = date;
+        this.view        = 'edit';
+        this.pickingCtx  = null;
       },
 
-      goPickRecipe(dayIdx, slotIdx) {
-        const plan = this.editingPlan;
-        if (!plan) return;
-        const slot = plan.days[dayIdx].slots[slotIdx];
-        this.pickingCtx = {
-          dayIdx,
-          slotIdx,
-          dayDate: plan.days[dayIdx].date,
-          slotName: slot.name,
-        };
-        // Pre-filtruj po nazwie slotu jeśli pasuje do tagu (śniadanie/obiad/kolacja)
+      goPickRecipe(slotIdx) {
+        const day = this.editingDay;
+        if (!day) return;
+        const slot = day.slots[slotIdx];
+        this.pickingCtx = { slotIdx, dayDate: day.date, slotName: slot.name };
         this.pickFilter = this.allTags.includes(slot.name) ? slot.name : '';
-        this.view = 'pick';
+        this.pickerIdx  = 0;
+        this.view       = 'pick';
       },
 
-      // ── Plan CRUD ───────────────────────────────────────────────────────
-      createPlan() {
-        if (!this.dateRangeValid) return;
-        const days = daysInRange(this.newStart, this.newEnd);
-        const id = uid();
-        this.plans.push({
-          id,
-          days: days.map((date) => ({ date, slots: makeSlots() })),
-          createdAt: new Date().toISOString(),
-        });
+      toggleAddDay() {
+        this.addingDay = !this.addingDay;
+        if (this.addingDay) this.newDayDate = todayISO();
+      },
+
+      // ── Day CRUD ──────────────────────────────────────────────────────────
+      addDay() {
+        if (!this.newDayDate) return;
+        const existing = this.days.find((d) => d.date === this.newDayDate);
+        if (existing) {
+          this.addingDay = false;
+          this.goEdit(existing.date);
+          return;
+        }
+        this.days.push({ date: this.newDayDate, slots: makeSlots() });
         this._save();
-        this.goEdit(id);
+        this.addingDay = false;
+        this.goEdit(this.newDayDate);
       },
 
-      deletePlan(id) {
-        if (!confirm('Usunąć ten plan?')) return;
-        this.plans = this.plans.filter((p) => p.id !== id);
-        if (this.activeForShopping === id) this.activeForShopping = null;
+      deleteDay(date) {
+        if (!confirm('Usunąć ten dzień z planu?')) return;
+        this.days = this.days.filter((d) => d.date !== date);
         this._save();
       },
 
-      // ── Slot editing ────────────────────────────────────────────────────
+      // ── Slot editing ──────────────────────────────────────────────────────
       pickRecipe(recipeId) {
-        if (!this.pickingCtx) return;
-        const { dayIdx, slotIdx } = this.pickingCtx;
-        const plan = this.plans.find((p) => p.id === this.editingId);
-        if (!plan) return;
-        plan.days[dayIdx].slots[slotIdx].recipeId = recipeId;
+        if (!this.pickingCtx || !recipeId) return;
+        const { slotIdx } = this.pickingCtx;
+        const day = this.days.find((d) => d.date === this.editingDate);
+        if (!day) return;
+        day.slots[slotIdx].recipeId = recipeId;
         this._save();
-        // Wróć do edytora po wyborze
-        this.view = 'edit';
+        this.view       = 'edit';
         this.pickingCtx = null;
       },
 
-      clearRecipe(dayIdx, slotIdx) {
-        const plan = this.plans.find((p) => p.id === this.editingId);
-        if (!plan) return;
-        plan.days[dayIdx].slots[slotIdx].recipeId = null;
+      clearRecipe(slotIdx) {
+        const day = this.days.find((d) => d.date === this.editingDate);
+        if (!day) return;
+        day.slots[slotIdx].recipeId = null;
         this._save();
       },
 
-      addSlot(dayIdx) {
-        const plan = this.plans.find((p) => p.id === this.editingId);
-        if (!plan) return;
-        plan.days[dayIdx].slots.push({
-          id: uid(),
-          name: 'Własny posiłek',
-          recipeId: null,
-          isCustom: true,
-        });
+      addSlot() {
+        const day = this.days.find((d) => d.date === this.editingDate);
+        if (!day) return;
+        day.slots.push({ id: uid(), name: 'Własny posiłek', recipeId: null, isCustom: true });
         this._save();
       },
 
-      removeSlot(dayIdx, slotIdx) {
-        const plan = this.plans.find((p) => p.id === this.editingId);
-        if (!plan) return;
-        plan.days[dayIdx].slots.splice(slotIdx, 1);
+      removeSlot(slotIdx) {
+        const day = this.days.find((d) => d.date === this.editingDate);
+        if (!day) return;
+        day.slots.splice(slotIdx, 1);
         this._save();
       },
 
-      // ── Shopping list ───────────────────────────────────────────────────
-      goShopping(planId) {
-        this.activeForShopping = planId;
-        this._save();
-        window.location.href = base + 'lista-zakupow/';
-      },
-
-      // ── Storage ─────────────────────────────────────────────────────────
-      _save() {
-        persistStorage(this.plans, this.activeForShopping);
-      },
+      // ── Storage ───────────────────────────────────────────────────────────
+      _save() { saveDays(this.days); },
 
       init() {
-        const stored = loadStorage();
-        this.plans = stored.plans;
-        this.activeForShopping = stored.activeForShopping ?? null;
+        this.days = loadDays();
       },
     };
   };

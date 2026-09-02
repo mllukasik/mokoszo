@@ -43,12 +43,12 @@ async function clearAll(page: Page) {
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
 
-/** Czeka aż Alpine pokaże zawartość listy zakupów (nie stan pusty). */
+/** Czeka aż Alpine pokaże zawartość listy zakupów (nagłówek h1 widoczny). */
 async function waitForShoppingContent(page: Page) {
   await page.waitForFunction(
     () => {
-      const full = document.querySelector('[x-show="!isEmpty"]') as HTMLElement | null;
-      return full ? window.getComputedStyle(full).display !== 'none' : false;
+      const h1 = document.querySelector('h1');
+      return h1 ? window.getComputedStyle(h1).display !== 'none' && (h1.textContent ?? '').includes('Lista zakupów') : false;
     },
     { timeout: 8_000 }
   );
@@ -65,12 +65,12 @@ async function waitForCards(page: Page) {
   );
 }
 
-/** Czeka aż widok listy planów jest aktywny (przycisk "+ Nowy plan" widoczny). */
+/** Czeka aż widok listy dni jest aktywny (przycisk "+ Dodaj dzień" widoczny). */
 async function waitForPlanList(page: Page) {
   await page.waitForFunction(
     () => {
       const btn = Array.from(document.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === '+ Nowy plan'
+        (b) => b.textContent?.trim() === '+ Dodaj dzień'
       );
       return btn ? window.getComputedStyle(btn).display !== 'none' : false;
     },
@@ -78,17 +78,15 @@ async function waitForPlanList(page: Page) {
   );
 }
 
-/** Czeka aż edytor planu renderuje min. n dni. */
-async function waitForEditView(page: Page, minDays = 1) {
+/** Czeka aż widok edytora dnia jest aktywny ("← Wszystkie dni" widoczny). */
+async function waitForEditView(page: Page, _minDays = 1) {
   await page.waitForFunction(
-    (n: number) => {
+    () => {
       const back = Array.from(document.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === '← Plany'
+        (b) => b.textContent?.trim() === '← Wszystkie dni'
       );
-      if (!back || window.getComputedStyle(back).display === 'none') return false;
-      return document.querySelectorAll('.space-y-4 > div.rounded-xl').length >= n;
+      return back ? window.getComputedStyle(back).display !== 'none' : false;
     },
-    minDays,
     { timeout: 10_000 }
   );
 }
@@ -128,35 +126,33 @@ test.describe('Test 1 — Pełny flow usera', () => {
     await expect(page).toHaveURL('/mokoszo/plan/');
     await waitForPlanList(page);
 
-    // ── Krok 4: utwórz nowy plan (3 dni) ─────────────────────────────────
-    await page.getByRole('button', { name: '+ Nowy plan' }).click();
-    await page.waitForSelector('#plan-start', { state: 'visible' });
-    await page.fill('#plan-start', '2026-08-12');
-    await page.fill('#plan-end', '2026-08-14');
-    await page.getByRole('button', { name: 'Utwórz plan' }).click();
-    await waitForEditView(page, 3);
+    // ── Krok 4: dodaj dzień (nowe UI: jeden dzień naraz) ─────────────────
+    await page.getByRole('button', { name: '+ Dodaj dzień' }).first().click();
+    await page.locator('#new-day-date').waitFor({ state: 'visible' });
+    await page.fill('#new-day-date', '2026-08-12');
+    await page.getByRole('button', { name: 'Dodaj' }).click();
+    await waitForEditView(page);
 
-    // ── Krok 5: wybierz przepis dla śniadania w dniu 1 (nowy picker) ────
-    const firstDay = page.locator('.space-y-4 > div.rounded-xl').first();
-    await firstDay.getByText('+ wybierz przepis').first().click();
+    // ── Krok 5: wybierz przepis dla śniadania (Tinder picker) ────────────
+    await page.getByText('+ wybierz przepis').first().click();
 
     // Poczekaj na widok pickera przepisów
-    await page.getByRole('button', { name: '← Wróć do planu' }).waitFor({ state: 'visible', timeout: 8_000 });
+    await page.getByRole('button', { name: '← Wróć do dnia' }).waitFor({ state: 'visible', timeout: 8_000 });
 
-    // Kliknij "Wszystkie" żeby mieć pełną listę, potem wybierz pierwszy przepis
+    // Kliknij "Wszystkie", pobierz tytuł bieżącej karty
     await page.getByRole('button', { name: 'Wszystkie' }).click();
-    const firstRecipeCard = page.locator('.grid > button').first();
-    await firstRecipeCard.waitFor({ state: 'visible', timeout: 5_000 });
-    const chosenRecipe = (await firstRecipeCard.locator('h3').textContent())!.trim();
-    await firstRecipeCard.click();
+    const tinderCard = page.locator('.rounded-2xl h3').first();
+    await tinderCard.waitFor({ state: 'visible', timeout: 5_000 });
+    const chosenRecipe = (await tinderCard.textContent())!.trim();
+    await page.getByRole('button', { name: /\+ Dodaj/ }).click();
 
-    await waitForEditView(page, 3);
+    await waitForEditView(page);
 
     // Wybrany przepis widoczny w slocie
-    await expect(firstDay).toContainText(chosenRecipe);
+    await expect(page.locator('.space-y-2')).toContainText(chosenRecipe);
 
     // ── Krok 6: przejście do listy zakupów ────────────────────────────────
-    await page.getByRole('button', { name: '🛒 Lista zakupów' }).click();
+    await page.getByRole('link', { name: /lista zakupów/i }).first().click();
     await expect(page).toHaveURL('/mokoszo/lista-zakupow/');
     await waitForShoppingContent(page);
 
@@ -167,13 +163,13 @@ test.describe('Test 1 — Pełny flow usera', () => {
       .locator('p.text-2xl').textContent();
     expect(parseFloat(kcalText ?? '0')).toBeGreaterThan(0);
 
-    // ── Krok 7: powrót do planów ──────────────────────────────────────────
-    await page.getByRole('link', { name: /wróć do planów/i }).click();
+    // ── Krok 7: powrót do planera ──────────────────────────────────────────
+    await page.getByRole('link', { name: /wróć do planera/i }).click();
     await expect(page).toHaveURL('/mokoszo/plan/');
     await waitForPlanList(page);
 
-    // Plan widoczny na liście z datą
-    await expect(page.locator('.grid > div').filter({ hasText: 'sie' }).first()).toBeVisible();
+    // Dzień widoczny na liście — przycisk "Edytuj" istnieje
+    await expect(page.getByRole('button', { name: 'Edytuj' }).first()).toBeVisible();
   });
 });
 

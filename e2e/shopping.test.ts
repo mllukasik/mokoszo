@@ -44,12 +44,11 @@ async function clearPlan(page: Page) {
 async function waitForContent(page: Page) {
   await page.waitForFunction(
     () => {
-      const empty = document.querySelector('[x-show="isEmpty"]');
-      const full  = document.querySelector('[x-show="!isEmpty"]');
-      if (!empty || !full) return false;
-      const eStyle = window.getComputedStyle(empty as HTMLElement).display;
-      const fStyle = window.getComputedStyle(full as HTMLElement).display;
-      return eStyle !== 'none' || fStyle !== 'none';
+      // Stan pusty ma x-show="isEmpty", treść ma x-show z "isEmpty" i "||"
+      const allXshow = Array.from(document.querySelectorAll('[x-show]')) as HTMLElement[];
+      return allXshow.some(
+        (el) => window.getComputedStyle(el).display !== 'none'
+      );
     },
     { timeout: 8_000 }
   );
@@ -100,7 +99,9 @@ test.describe('Lista zakupów — T6.1', () => {
     await page.reload();
     await waitForContent(page);
 
-    await expect(page.locator('[x-show="!isEmpty"]')).toBeVisible();
+    // Treść widoczna — nagłówek "Lista zakupów" wyświetlony
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista zakupów');
+    // Stan pusty nie jest widoczny
     await expect(page.locator('[x-show="isEmpty"]')).not.toBeVisible();
   });
 
@@ -114,14 +115,14 @@ test.describe('Lista zakupów — T6.1', () => {
     await expect(page).toHaveTitle(/Lista zakupów/);
   });
 
-  test('wyświetla nazwę planu (datę) jako podtytuł', async ({ page }) => {
+  test('wyświetla informację o liczbie dni z przepisami', async ({ page }) => {
     await page.goto(URL);
     await setPlan(page, [{ date: '2026-08-11', recipeIds: ['spaghetti-bolognese'] }]);
     await page.reload();
     await waitForContent(page);
 
-    // Podtytuł z datą planu
-    await expect(page.locator('[x-show="!isEmpty"] p[x-show="planName"]')).toBeVisible();
+    // rangeLabel pokazuje "X dzień/dni z przepisami"
+    await expect(page.getByText(/z przepisami/)).toBeVisible();
   });
 });
 
